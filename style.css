@@ -1,0 +1,33 @@
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+line {
+  stroke: red
+}
+
+g.books path{
+  stroke: black;
+  fill: lightsteelblue;
+  stroke-width: 2;
+}
+
+g.titles text{
+  font-size: 30px;
+}
+
+g.hidden line,
+g.hidden path {
+  display: none;
+}
+
+/* space means contains */
+g.tick line{
+  stroke: blue;
+}
+
+g.tick text{
+  font-size: 20px;
+  fill: purple;
+}
