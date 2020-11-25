@@ -1,33 +1,32 @@
+:root {
+  --brown: #875845;
+  --darkbrown: #4F3529;
+}
+
 html, body {
   margin: 0;
   height: 100%;
 }
 
-line {
-  stroke: red
+/*                             BOOKCASES                                     */
+.case {
+  fill: var(--brown);
 }
+
+/* order matters */
+
+.shelf {
+  fill: var(--brown)
+}
+
+.background{
+  fill: var(--darkbrown)
+}
+
+/*                               BOOKS                                       */
 
 g.books path{
   stroke: black;
   fill: lightsteelblue;
   stroke-width: 2;
-}
-
-g.titles text{
-  font-size: 30px;
-}
-
-g.hidden line,
-g.hidden path {
-  display: none;
-}
-
-/* space means contains */
-g.tick line{
-  stroke: blue;
-}
-
-g.tick text{
-  font-size: 20px;
-  fill: purple;
 }
