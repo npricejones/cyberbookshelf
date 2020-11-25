@@ -50,7 +50,7 @@ d3.csv("goodreads_library_export.csv")
     // need to write a handler for books with no page count
 
     data = data.slice().sort(function (a, b) {
-      d3.ascending(a.author, b.author) || d3.ascending(a.seriesAll, b.seriesAll)
+      return d3.ascending(a.author, b.author) || d3.ascending(a.seriesAll, b.seriesAll)
     })
 
     var numberbooks = data.length
@@ -206,8 +206,10 @@ d3.csv("goodreads_library_export.csv")
           x0 = caseShelves[shelfInd].x + bookGap
           y0 = caseShelves[shelfInd].y - 1.1
         } else {
+          // Break out if the next case would put us beyond the bounds of page
           if ((caseBounds.xouter + swidth + caseThickness * 2) > twidth) {
             break;
+            // Otherwise create a new shelf
           } else {
             caseInd += 1
             currentCase = makeshelf(caseBounds.xouter + caseGap)
@@ -219,6 +221,7 @@ d3.csv("goodreads_library_export.csv")
           }
         }
       }
+      // Create bounds of books
       bottomL = [x0, y0]
       bottomR = [x0 + booklength, y0]
       topR = [x0 + booklength, y0 - bheight]
@@ -236,7 +239,9 @@ d3.csv("goodreads_library_export.csv")
       .attr("d", function (d) {
         return "M" + d.join("L") + "Z"
       })
-      .attr("class", "book")
+      .attr("class", function (d, i) {
+        return "book " + data[i].status + " " + data[i].authors;
+      })
 
     //calculate the number of bookcase
     //~20 books per shelf, 5 shelves per bookcase
