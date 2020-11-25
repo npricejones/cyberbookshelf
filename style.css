@@ -25,8 +25,8 @@ html, body {
 
 /*                               BOOKS                                       */
 
-g.books path{
+.book {
   stroke: black;
   fill: lightsteelblue;
-  stroke-width: 2;
+  stroke-width: 1;
 }

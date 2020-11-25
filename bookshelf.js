@@ -1,6 +1,6 @@
 var parseDay = d3.timeParse("%Y/%m/%d")
 var parseYear = d3.timeParse("%Y")
-d3.csv("goodreads_small.csv")
+d3.csv("goodreads_library_export.csv")
   .row(function (d) {
     var pointobj = {}
     authorlist = [d['Author'], d['Additional Authors']]
@@ -27,8 +27,6 @@ d3.csv("goodreads_small.csv")
       pointobj['series'] = undefined
       pointobj['seriesNum'] = undefined
     }
-
-    console.log(pointobj['series'], pointobj['seriesAll'])
 
     pointobj['publisher'] = d['Publisher']
     pointobj['binding'] = d['Binding']
@@ -73,8 +71,6 @@ d3.csv("goodreads_small.csv")
     var caseThickness = sheight * 0.1
 
     var numshelf = Math.floor((theight - margin.top - margin.bottom) / sheight)
-
-    console.log(theight, sheight, numshelf)
 
     var svg = d3.select("body").append("svg")
       .attr("height", "100%")
@@ -180,16 +176,67 @@ d3.csv("goodreads_small.csv")
     }
 
     // loop to fill shelves
+    var caseGap = 10
+    var bookGap = 2.5
+    // define a linear factor to convert number of pages to pixel space
+    // start with 0.01
+    var pg2px = 0.05
+    // define a standard height for the books
+    var bheight = 0.75 * sheight
 
-    shelfInfo = makeshelf(margin.top + 0)
+    var currentCase = makeshelf(margin.top + 0)
+    var caseBounds = currentCase[0]
+    var caseShelves = currentCase[1]
+    var caseInd = 0
 
-    bounds = shelfInfo[0]
-    shelfStarts = shelfInfo[1]
+    var shelfInd = 0
+    var x0 = caseShelves[shelfInd].x + bookGap
+    var y0 = caseShelves[shelfInd].y - 1.1
 
-    shelfInfo2 = makeshelf(bounds.xouter + 10)
+    var vertices = []
 
-    console.log(bounds, shelfStarts)
+    var i;
+    for (i = 0; i < numberbooks; i++) {
+      var booklength = data[i].numPage * pg2px
+      if ((x0 + booklength) > (caseShelves[shelfInd].x + swidth - bookGap)) {
+        // If shelf is full, move to the next shelf in the case, or if there
+        // are no shelves, move to the next case
+        if (shelfInd < caseShelves.length - 1) {
+          shelfInd += 1
+          x0 = caseShelves[shelfInd].x + bookGap
+          y0 = caseShelves[shelfInd].y - 1.1
+        } else {
+          if ((caseBounds.xouter + swidth + caseThickness * 2) > twidth) {
+            break;
+          } else {
+            caseInd += 1
+            currentCase = makeshelf(caseBounds.xouter + caseGap)
+            caseBounds = currentCase[0]
+            caseShelves = currentCase[1]
+            shelfInd = 0
+            x0 = caseShelves[shelfInd].x + bookGap
+            y0 = caseShelves[shelfInd].y - 1.1
+          }
+        }
+      }
+      bottomL = [x0, y0]
+      bottomR = [x0 + booklength, y0]
+      topR = [x0 + booklength, y0 - bheight]
+      topL = [x0, y0 - bheight]
+      bookshape = [bottomL, bottomR, topR, topL]
+      x0 += booklength + bookGap
+      vertices.push(bookshape)
+    }
 
+    console.log(vertices)
+
+    svg.selectAll("path")
+      .data(vertices)
+      .enter().append("path")
+      .attr("d", function (d) {
+        return "M" + d.join("L") + "Z"
+      })
+      .attr("class", "book")
 
     //calculate the number of bookcase
     //~20 books per shelf, 5 shelves per bookcase
