@@ -3,13 +3,17 @@ var parseYear = d3.timeParse("%Y")
 d3.csv("goodreads_library_export.csv")
   .row(function (d) {
     var pointobj = {}
-    authorlist = [d['Author'], d['Additional Authors']]
+    authorlist = [d['Author']].concat(d['Additional Authors'].split(', '))
     // Strings
+
     pointobj['author'] = d['Author l-f']
     if (d['Additional Authors']) {
       pointobj['authors'] = authorlist.join(', ')
+      var firstAuthors = authorlist.slice(0, 2)
+      pointobj['displayAuthors'] = firstAuthors.join(', ') + ", et al."
     } else {
       pointobj['authors'] = d['Author']
+      pointobj['displayAuthors'] = d['Author']
     }
     pointobj['coauthor'] = d['Additional Authors']
 
@@ -59,8 +63,8 @@ d3.csv("goodreads_library_export.csv")
     var twidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth
     var theight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight
     var margin = {
-      left: 50,
-      right: 50,
+      left: 100,
+      right: 100,
       top: 40,
       bottom: 0
     }
@@ -186,90 +190,208 @@ d3.csv("goodreads_library_export.csv")
     // define a standard height for the books
     var bheight = 0.75 * sheight
 
-    var currentCase = makeshelf(margin.top + 0)
-    var caseBounds = [currentCase[0]]
-    var caseShelves = [currentCase[1]]
-    var caseInd = 0
-    var totalCase = 0
 
-    var shelfInd = 0
-    var x0 = caseShelves[caseInd][shelfInd].x + bookGap
-    var y0 = caseShelves[caseInd][shelfInd].y - 1.1
+    // Create first book shelf,
+    var currentCase = makeshelf(margin.left + 0);
+    var caseBounds = [currentCase[0]];
+    var caseShelves = [currentCase[1]];
 
-    var vertices = []
+    var caseInd = 0;
+    var totalCase = 0;
 
-    var opacity = 1
+    // Create as many more bookshelves as needed
+    // Break out if the next case would put us beyond the bounds of page
+    while ((caseBounds[caseInd].xouter + swidth + (caseThickness * 2)) < twidth - margin.right) {
+      currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap);
+      caseBounds.push(currentCase[0]);
+      caseShelves.push(currentCase[1]);
+      totalCase += 1;
+      caseInd += 1;
+    };
 
-    var i;
-    for (i = 0; i < numberbooks; i++) {
-      var booklength = data[i].numPage * pg2px
-      if ((x0 + booklength) > (caseShelves[caseInd][shelfInd].x + swidth - bookGap)) {
-        // If shelf is full, move to the next shelf in the case, or if there
-        // are no shelves, move to the next case
-        if (shelfInd < caseShelves[caseInd].length - 1) {
-          shelfInd += 1
-          x0 = caseShelves[caseInd][shelfInd].x + bookGap
-          y0 = caseShelves[caseInd][shelfInd].y - 1.1
-        } else {
-          // Break out if the next case would put us beyond the bounds of page
-          if ((caseBounds[caseInd].xouter + swidth + caseThickness * 2) > twidth) {
-            totalCase += 1
-            caseInd = 0
-            shelfInd = 0
-            x0 = caseShelves[caseInd][shelfInd].x + bookGap
-            y0 = caseShelves[caseInd][shelfInd].y - 1.1
-            opacity = 0
-            // Otherwise create a new shelf
-          } else {
-            currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap)
-            totalCase += 1
-            caseInd += 1
-            caseBounds.push(currentCase[0])
-            caseShelves.push(currentCase[1])
-            shelfInd = 0
-            x0 = caseShelves[caseInd][shelfInd].x + bookGap
-            y0 = caseShelves[caseInd][shelfInd].y - 1.1
-          }
-        }
-      }
-      // Create bounds of books
-      bottomL = [x0, y0]
-      bottomR = [x0 + booklength, y0]
-      topR = [x0 + booklength, y0 - bheight]
-      topL = [x0, y0 - bheight]
-      bookshape = [bottomL, bottomR, topR, topL]
-      x0 += booklength + bookGap
-      data[i]['opacity'] = opacity
-      data[i]['case'] = totalCase
-      vertices.push(bookshape)
+    // Add scroll buttons
+
+    var leftButtonx = margin.left / 2;
+    var rightButtonx = caseBounds[caseInd].xouter + leftButtonx;
+    var leftButtony = ((caseBounds[0].ylower - caseBounds[0].yupper) / 2) + caseBounds[0].yupper;
+    var rightButtony = leftButtony;
+
+    var buttons = [{
+      'cx': leftButtonx,
+      'cy': leftButtony,
+      'direction': 'left'
+    }, {
+      'cx': rightButtonx,
+      'cy': rightButtony,
+      'direction': 'right'
+    }];
+
+    svg.selectAll("circle.button")
+      .data(buttons)
+      .enter().append("circle")
+      .attr("cx", function (d, i) {
+        return d.cx;
+      })
+      .attr("cy", function (d, i) {
+        return d.cy;
+      })
+      .attr("r", 25)
+      .attr("class", function (d, i) {
+        return "button " + d.direction;
+      })
+      .classed("inactive", true)
+      .on("click", function (d, i) {
+        return None;
+      })
+
+
+    var angle = 32 * Math.PI / 180 //radians
+
+    function line(x, x0, y0, angle) {
+      var m = Math.tan(angle)
+      return m * (x - x0) + y0;
     }
 
-    var tooltip = d3.select("body")
-      .append("div")
-      .style("opacity", "0")
-      .style("position", "absolute")
+    function invertline(y, x0, y0, angle) {
+      var m = Math.tan(angle)
+      return ((y - y0) / m) + x0;
+    }
 
-    svg.selectAll("path")
-      .data(vertices)
+    var awidth = 20
+    var athick = 7
+    var abuffer = 3
+
+    xstartL = buttons[0].cx - 1.2 * (awidth / 2)
+    ystartL = buttons[0].cy
+
+    xstartR = buttons[1].cx + 1.2 * (awidth / 2)
+    ystartR = buttons[1].cy
+
+    var arrows = [
+      [
+        [xstartL, ystartL],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, angle)],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL - athick, angle)],
+        [invertline(ystartL, xstartL, ystartL - athick, angle), ystartL],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL + athick, -angle)],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, -angle)],
+        [xstartL, ystartL]
+      ], //left arrow
+      [
+        [xstartR, ystartR],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, -angle)],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR - athick, -angle)],
+        [invertline(ystartR, xstartR, ystartR - athick, -angle), ystartR],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR + athick, angle)],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, angle)],
+        [xstartR, ystartR]
+      ] // right arrow
+    ]
+
+    svg.selectAll("path.arrow")
+      .data(arrows)
       .enter().append("path")
       .attr("d", function (d) {
         return "M" + d.join("L") + "Z"
       })
       .attr("class", function (d, i) {
-        return "book " + data[i].status + " case" + data[i].case+" visible" + data[i].opacity;
+        return "arrow " + buttons[i].direction;
       })
-      .style("opacity", function (d, i) {
-        return data[i].opacity;
-      })
+      .classed("inactive", true)
 
-    svg.selectAll(".visible1")
-      .data(vertices)
-      .on("mousemove", function (d, i) {
-        tooltip.style("opacity", "1")
-          .style("left", d[2][0] + "px")
-          .style("top", d[2][1] + "px")
-        tooltip.html(data[i].title + "<br>by: " + data[i].authors)
-      })
+
+
+
+    //
+    // var shelfInd = 0
+    // var x0 = caseShelves[caseInd][shelfInd].x + bookGap
+    // var y0 = caseShelves[caseInd][shelfInd].y - 1.1
+    //
+    // var vertices = []
+    //
+    //
+    // var i;
+    // for (i = 0; i < numberbooks; i++) {
+    //   var booklength = data[i].numPage * pg2px
+    //   if ((x0 + booklength) > (caseShelves[caseInd][shelfInd].x + swidth - bookGap)) {
+    //     // If shelf is full, move to the next shelf in the case, or if there
+    //     // are no shelves, move to the next case
+    //     if (shelfInd < caseShelves[caseInd].length - 1) {
+    //       shelfInd += 1
+    //       x0 = caseShelves[caseInd][shelfInd].x + bookGap
+    //       y0 = caseShelves[caseInd][shelfInd].y - 1.1
+    //     } else {
+    //       // Break out if the next case would put us beyond the bounds of page
+    //       if ((caseBounds[caseInd].xouter + swidth + caseThickness * 2) > twidth) {
+    //         break;
+    //         // Otherwise create a new shelf
+    //       } else {
+    //         currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap)
+    //         totalCase += 1
+    //         caseInd += 1
+    //         caseBounds.push(currentCase[0])
+    //         caseShelves.push(currentCase[1])
+    //         shelfInd = 0
+    //         x0 = caseShelves[caseInd][shelfInd].x + bookGap
+    //         y0 = caseShelves[caseInd][shelfInd].y - 1.1
+    //       }
+    //     }
+    //   }
+    //   // Create bounds of books
+    //   bottomL = [x0, y0]
+    //   bottomR = [x0 + booklength, y0]
+    //   topR = [x0 + booklength, y0 - bheight]
+    //   topL = [x0, y0 - bheight]
+    //   bookshape = [bottomL, bottomR, topR, topL]
+    //   x0 += booklength + bookGap
+    //   vertices.push(bookshape)
+    // }
+    //
+    // var tooltip = d3.select("body")
+    //   .append("div")
+    //   .style("opacity", "0")
+    //   .style("position", "absolute")
+    //
+    // function shelveBooks(vertices) {
+    //
+    //   // remove all books
+    //
+    //   // get new books
+    //
+    //   svg.selectAll("path")
+    //     .data(vertices)
+    //     .enter().append("path")
+    //     .attr("d", function (d) {
+    //       return "M" + d.join("L") + "Z"
+    //     })
+    //     .attr("class", function (d, i) {
+    //       return "book " + data[i].status;
+    //     })
+    //     .on("mousemove", function (d, i) {
+    //       tooltip.style("opacity", "1")
+    //         .style("left", d[2][0] + "px")
+    //         .style("top", d[2][1] + "px")
+    //       tooltip.html(data[i].title + "<br>by: " + data[i].displayAuthors)
+    //     })
+    //
+    //
+    // }
+    //
+    // svg.selectAll("path")
+    //   .data(vertices)
+    //   .enter().append("path")
+    //   .attr("d", function (d) {
+    //     return "M" + d.join("L") + "Z"
+    //   })
+    //   .attr("class", function (d, i) {
+    //     return "book " + data[i].status;
+    //   })
+    //   .on("mousemove", function (d, i) {
+    //     tooltip.style("opacity", "1")
+    //       .style("left", d[2][0] + "px")
+    //       .style("top", d[2][1] + "px")
+    //     tooltip.html(data[i].title + "<br>by: " + data[i].displayAuthors)
+    //   })
 
 
     //calculate the number of bookcase

@@ -1,6 +1,10 @@
 :root {
   --brown: #875845;
   --darkbrown: #4F3529;
+  --highlight: #A23E48;
+  --highlightstroke: #C15C66;
+  --lowlight: #B1AE91;
+  --lowlightstroke: #837F5D;
 }
 
 html, body {
@@ -11,12 +15,13 @@ html, body {
 /*                             BOOKCASES                                     */
 .case {
   fill: var(--brown);
+  stroke: black;
 }
 
 /* order matters */
 
 .shelf {
-  fill: var(--brown)
+  fill: var(--brown);
 }
 
 .background{
@@ -26,7 +31,41 @@ html, body {
 /*                               BOOKS                                       */
 
 .book {
-  stroke: black;
-  fill: lightsteelblue;
+  fill: grey;
+}
+
+.read {
+  fill: var(--lowlight);
+  stroke: var(--lowlightstroke);
   stroke-width: 1;
+}
+
+.to-read {
+  fill: var(--highlight);
+  stroke: var(--highlightstroke);
+  stroke-width: 1.5;
+}
+
+.button.active{
+  fill: #9DB4C0;
+  stroke: #49545B;
+  stroke-width: 4;
+}
+
+.arrow.active{
+  fill: #5C6B73;
+  stroke: #363F44;
+  stroke-width: 3;
+}
+
+.button.inactive{
+  fill: #B4C6CF;
+  stroke: #9DB4C0;
+  stroke-width: 4;
+}
+
+.arrow.inactive{
+  fill: #B4C6CF;
+  stroke: #9DB4C0;
+  stroke-width: 3;
 }
