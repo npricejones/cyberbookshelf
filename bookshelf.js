@@ -201,14 +201,22 @@ d3.csv("goodreads_library_export.csv")
     var caseInd = 0;
     var totalCase = 0;
 
+    var shelfExtent = caseBounds[caseInd].xouter + swidth + (caseThickness * 2) + (caseGap * caseInd)
+    var availSpace = twidth - margin.right - margin.left
     // Create as many more bookshelves as needed
     // Break out if the next case would put us beyond the bounds of page
-    while ((caseBounds[caseInd].xouter + swidth + (caseThickness * 2)) < twidth - margin.right) {
-      currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap);
-      caseBounds.push(currentCase[0]);
-      caseShelves.push(currentCase[1]);
-      totalCase += 1;
-      caseInd += 1;
+    while (true) {
+      if (shelfExtent < availSpace) {
+        currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap);
+        shelfExtent = caseBounds[caseInd].xouter + swidth + (caseThickness * 2) + (caseGap * caseInd)
+        caseBounds.push(currentCase[0]);
+        caseShelves.push(currentCase[1]);
+        totalCase += 1;
+        caseInd += 1;
+      } else {
+        break
+      }
+
     };
 
 
@@ -414,7 +422,7 @@ d3.csv("goodreads_library_export.csv")
 
     fake_div.remove();
 
-    var buttonDuration = 150;
+    var buttonDuration = 100;
     var buttonDelay = 0;
 
     var fake_div = d3.select('body')
