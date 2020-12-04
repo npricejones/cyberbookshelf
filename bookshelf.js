@@ -427,8 +427,6 @@ d3.csv("goodreads_library_export.csv")
 
     fake_div.remove();
 
-    //need to add condition such that there is no response to click if button starts as inactive
-
     function moveRight() {
       if (bookInd < numberbooks) {
         casePosition = casePosition + 1
@@ -468,21 +466,30 @@ d3.csv("goodreads_library_export.csv")
           .style("stroke-width", activeWidth)
 
       } else {
-        buttonGroup.selectAll(".right")
-          .classed("active", false)
-          .classed("inactive", true)
-          .transition()
-          .duration(buttonDuration)
-          .delay(buttonDelay)
-          .style("fill", clickedFill)
-          .style("stroke", clickedStroke)
-          .style("stroke-width", clickedWidth)
-          .transition()
-          .duration(buttonDuration)
-          .delay(buttonDelay)
-          .style("fill", inactiveFill)
-          .style("stroke", inactiveStroke)
-          .style("stroke-width", inactiveWidth)
+        if (buttonGroup.selectAll(".right").classed("active")) {
+          buttonGroup.selectAll(".right")
+            .classed("active", false)
+            .classed("inactive", true)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedFill)
+            .style("stroke", clickedStroke)
+            .style("stroke-width", clickedWidth)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+        } else {
+          buttonGroup.selectAll(".right")
+            .classed("active", false)
+            .classed("inactive", true)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+        }
       }
     }
 
@@ -506,21 +513,30 @@ d3.csv("goodreads_library_export.csv")
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
       } else {
-        buttonGroup.selectAll(".left")
-          .classed("active", false)
-          .classed("inactive", true)
-          .transition()
-          .duration(buttonDuration)
-          .delay(buttonDelay)
-          .style("fill", clickedFill)
-          .style("stroke", clickedStroke)
-          .style("stroke-width", clickedWidth)
-          .transition()
-          .duration(buttonDuration)
-          .delay(buttonDelay)
-          .style("fill", inactiveFill)
-          .style("stroke", inactiveStroke)
-          .style("stroke-width", inactiveWidth)
+        if (buttonGroup.selectAll(".left").classed("active")) {
+          buttonGroup.selectAll(".left")
+            .classed("active", false)
+            .classed("inactive", true)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedFill)
+            .style("stroke", clickedStroke)
+            .style("stroke-width", clickedWidth)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+        } else {
+          buttonGroup.selectAll(".left")
+            .classed("active", false)
+            .classed("inactive", true)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+        }
       }
       if (bookInd < numberbooks) {
         buttonGroup.selectAll(".right")
