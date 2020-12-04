@@ -61,7 +61,7 @@ html, body {
 }
 
 .button.clicked{
-  fill: #7F8F98;
-  stroke: #32393D;
-  stroke-width: 4;
+  fill: #40474B;
+  stroke: #1E2124;
+  stroke-width: 5;
 }

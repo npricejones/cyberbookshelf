@@ -393,6 +393,42 @@ d3.csv("goodreads_library_export.csv")
     buttonGroup.selectAll(".left")
       .classed("inactive", true)
 
+    //extract styles from css
+    var fake_div = d3.select('body')
+      .append('div')
+      .attr('class', 'button active')
+      .style('display', 'none')
+    activeFill = fake_div.style('fill');
+    activeStroke = fake_div.style('stroke');
+    activeWidth = fake_div.style('stroke-width');
+
+    fake_div.remove();
+
+    var fake_div = d3.select('body')
+      .append('div')
+      .attr('class', 'button inactive')
+      .style('display', 'none')
+    inactiveFill = fake_div.style('fill');
+    inactiveStroke = fake_div.style('stroke');
+    inactiveWidth = fake_div.style('stroke-width');
+
+    fake_div.remove();
+
+    var buttonDuration = 150;
+    var buttonDelay = 0;
+
+    var fake_div = d3.select('body')
+      .append('div')
+      .attr('class', 'button clicked')
+      .style('display', 'none')
+    clickedFill = fake_div.style('fill');
+    clickedStroke = fake_div.style('stroke');
+    clickedWidth = fake_div.style('stroke-width');
+
+    fake_div.remove();
+
+    //need to add condition such that there is no response to click if button starts as inactive
+
     function moveRight() {
       if (bookInd < numberbooks) {
         casePosition = casePosition + 1
@@ -403,19 +439,50 @@ d3.csv("goodreads_library_export.csv")
         buttonGroup.selectAll(".left")
           .classed("inactive", false)
           .classed("active", true)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
       } else {
         buttonGroup.selectAll(".left")
           .classed("active", false)
           .classed("inactive", true)
+          .style("fill", inactiveFill)
+          .style("stroke", inactiveStroke)
+          .style("stroke-width", inactiveWidth)
       }
       if (bookInd < numberbooks) {
         buttonGroup.selectAll(".right")
           .classed("inactive", false)
           .classed("active", true)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", clickedFill)
+          .style("stroke", clickedStroke)
+          .style("stroke-width", clickedWidth)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
+
       } else {
         buttonGroup.selectAll(".right")
           .classed("active", false)
           .classed("inactive", true)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", clickedFill)
+          .style("stroke", clickedStroke)
+          .style("stroke-width", clickedWidth)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", inactiveFill)
+          .style("stroke", inactiveStroke)
+          .style("stroke-width", inactiveWidth)
       }
     }
 
@@ -426,19 +493,49 @@ d3.csv("goodreads_library_export.csv")
         buttonGroup.selectAll(".left")
           .classed("inactive", false)
           .classed("active", true)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", clickedFill)
+          .style("stroke", clickedStroke)
+          .style("stroke-width", clickedWidth)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
       } else {
         buttonGroup.selectAll(".left")
           .classed("active", false)
           .classed("inactive", true)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", clickedFill)
+          .style("stroke", clickedStroke)
+          .style("stroke-width", clickedWidth)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", inactiveFill)
+          .style("stroke", inactiveStroke)
+          .style("stroke-width", inactiveWidth)
       }
       if (bookInd < numberbooks) {
         buttonGroup.selectAll(".right")
           .classed("inactive", false)
           .classed("active", true)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
       } else {
         buttonGroup.selectAll(".right")
           .classed("active", false)
           .classed("inactive", true)
+          .style("fill", inactiveFill)
+          .style("stroke", inactiveStroke)
+          .style("stroke-width", inactiveWidth)
       }
     }
 
@@ -447,6 +544,26 @@ d3.csv("goodreads_library_export.csv")
 
     buttonGroup.selectAll(".left")
       .on("click", moveLeft)
+
+    // by default, arrow keys navigate shelves, can toggle between
+    var browseShelf = -1
+    d3.select("body")
+      .on("keydown", function () {
+        //toggle between shelf and book browsing
+        if (d3.event.keyCode === 13) {
+          browseShelf = -browseShelf
+        }
+        if (d3.event.keyCode === 27) {
+          browseShelf = -1
+        }
+        if ((d3.event.keyCode === 39 || d3.event.keyCode === 40) && (browseShelf === -1)) {
+          moveRight();
+        }
+        if ((d3.event.keyCode === 37 || d3.event.keyCode === 38) && (browseShelf === -1)) {
+          moveLeft();
+        }
+      })
+    // add scroll tracking?
 
 
   })
