@@ -46,17 +46,7 @@ html, body {
   stroke-width: 1.5;
 }
 
-.button.active{
-  fill: #9DB4C0;
-  stroke: #49545B;
-  stroke-width: 4;
-}
-
-.arrow.active{
-  fill: #5C6B73;
-  stroke: #363F44;
-  stroke-width: 3;
-}
+/*                             BUTTON                                         */
 
 .button.inactive{
   fill: #B4C6CF;
@@ -64,8 +54,14 @@ html, body {
   stroke-width: 4;
 }
 
-.arrow.inactive{
-  fill: #B4C6CF;
-  stroke: #9DB4C0;
-  stroke-width: 3;
+.button.active{
+  fill: #9DB4C0;
+  stroke: #49545B;
+  stroke-width: 4;
+}
+
+.button.clicked{
+  fill: #7F8F98;
+  stroke: #32393D;
+  stroke-width: 4;
 }
