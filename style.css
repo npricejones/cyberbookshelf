@@ -64,6 +64,11 @@ div {
 
 /*                             BUTTON                                         */
 
+.btext{
+  font-family: Helvetica;
+  font-weight: bold;
+}
+
 .button.inactive{
   fill: #B4C6CF;
   stroke: #9DB4C0;

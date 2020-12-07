@@ -227,7 +227,7 @@ d3.csv("goodreads_library_export.csv")
       for (i = 0; i < visibleCases.length; i++) {
         var x = ((caseBounds[i].xouter - caseBounds[i].xinner) / 2) + caseBounds[i].xinner
         var y = caseBounds[i].yupper
-        var w = swidth * 0.6
+        var w = swidth * 0.4
         var h = 0.95 * (sheight - bheight)
         info = {
           'x': x - (w / 2),
@@ -369,15 +369,23 @@ d3.csv("goodreads_library_export.csv")
     var rightButtonx = caseBounds[caseInd].xouter + leftButtonx;
     var leftButtony = ((caseBounds[0].ylower - caseBounds[0].yupper) / 2) + caseBounds[0].yupper;
     var rightButtony = leftButtony;
+    var buttonr = margin.left * 0.25
+    var buttonfs = buttonr * 0.75
 
     var buttons = [{
       'cx': leftButtonx,
       'cy': leftButtony,
-      'direction': 'left'
+      'direction': 'left',
+      'label': 'previous',
+      'r': buttonr,
+      'size': buttonfs
     }, {
       'cx': rightButtonx,
       'cy': rightButtony,
-      'direction': 'right'
+      'direction': 'right',
+      'label': 'next',
+      'r': buttonr,
+      'size': buttonfs
     }];
 
 
@@ -397,7 +405,6 @@ d3.csv("goodreads_library_export.csv")
       .attr("class", function (d, i) {
         return "button " + d.direction;
       })
-
 
     // half opening angle of the arrow
     var angle = 32 * Math.PI / 180 //radians
@@ -499,6 +506,34 @@ d3.csv("goodreads_library_export.csv")
 
     fake_div.remove();
 
+    buttonGroup.selectAll("text.btext")
+      .data(buttons)
+      .enter().append("text")
+      .text(function (d, i) {
+        return d.label
+      })
+      .attr("x", function (d, i) {
+        return d.cx
+      })
+      .attr("y", function (d, i) {
+        return d.cy + (1.75 * d.r)
+      })
+      .attr("class", function (d, i) {
+        return "button btext " + d.direction
+      })
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .style("font-size", function (d, i) {
+        return d.size + "px";
+      })
+      .style("stroke-width", 0)
+
+    buttonGroup.selectAll("text.btext.left")
+      .style("fill", inactiveStroke)
+
+    buttonGroup.selectAll("text.btext.right")
+      .style("fill", activeStroke)
+
     function moveRight() {
       if (bookInd < numberbooks) {
         casePosition = casePosition + 1
@@ -515,6 +550,9 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", activeFill)
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .style("fill", activeStroke)
       } else {
         buttonGroup.selectAll(".left")
           .classed("active", false)
@@ -522,6 +560,9 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", inactiveFill)
           .style("stroke", inactiveStroke)
           .style("stroke-width", inactiveWidth)
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .style("fill", inactiveStroke)
       }
       // Change right button appearance
       if (bookInd < numberbooks) {
@@ -540,6 +581,16 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", activeFill)
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
+        buttonGroup.selectAll("text.btext.right")
+          .style("stroke-width", 0)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", clickedStroke)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", activeStroke)
         visibleCases = visibleCases.map(function (item) {
           // Increment each item by 1
           return item + (totalCase + 1);
@@ -564,6 +615,16 @@ d3.csv("goodreads_library_export.csv")
             .style("fill", inactiveFill)
             .style("stroke", inactiveStroke)
             .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.right")
+            .style("stroke-width", 0)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedStroke)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveStroke)
           visibleCases = visibleCases.map(function (item) {
             // Increment each item by 1
             return item + (totalCase + 1);
@@ -577,6 +638,9 @@ d3.csv("goodreads_library_export.csv")
             .style("fill", inactiveFill)
             .style("stroke", inactiveStroke)
             .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.right")
+            .style("fill", inactiveStroke)
+            .style("stroke-width", 0)
         }
       }
     }
@@ -602,6 +666,16 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", activeFill)
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", clickedStroke)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", activeStroke)
         visibleCases = visibleCases.map(function (item) {
           // Increment each item by 1
           return item - (totalCase + 1);
@@ -625,6 +699,16 @@ d3.csv("goodreads_library_export.csv")
             .style("fill", inactiveFill)
             .style("stroke", inactiveStroke)
             .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.left")
+            .style("stroke-width", 0)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedStroke)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveStroke)
           visibleCases = visibleCases.map(function (item) {
             // Increment each item by 1
             return item - (totalCase + 1);
@@ -638,6 +722,9 @@ d3.csv("goodreads_library_export.csv")
             .style("fill", inactiveFill)
             .style("stroke", inactiveStroke)
             .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.left")
+            .style("stroke-width", 0)
+            .style("fill", inactiveStroke)
         }
       }
       if (bookInd < numberbooks) {
@@ -647,6 +734,9 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", activeFill)
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
+        buttonGroup.selectAll("text.btext.right")
+          .style("stroke-width", 0)
+          .style("fill", activeStroke)
       } else {
         buttonGroup.selectAll(".right")
           .classed("active", false)
@@ -654,6 +744,9 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", inactiveFill)
           .style("stroke", inactiveStroke)
           .style("stroke-width", inactiveWidth)
+        buttonGroup.selectAll("text.btext.right")
+          .style("stroke-width", 0)
+          .style("fill", inactiveStroke)
       }
     }
 
