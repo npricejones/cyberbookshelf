@@ -1,6 +1,6 @@
 var parseDay = d3.timeParse("%Y/%m/%d")
 var parseYear = d3.timeParse("%Y")
-d3.csv("goodreads_library_export.csv")
+d3.csv("goodreads_library_export_ogrady.csv")
   .row(function (d) {
     var pointobj = {}
     authorlist = [d['Author']].concat(d['Additional Authors'].split(', '))
@@ -25,7 +25,11 @@ d3.csv("goodreads_library_export.csv")
     if (series) {
       series = series.split(')')[0].split('#')
       pointobj['series'] = series[0].split(',')[0].trim()
-      pointobj['seriesNum'] = Number(series[1].trim())
+      if (series[1]) {
+        pointobj['seriesNum'] = Number(series[1].trim())
+      } else {
+        pointobj['seriesNum'] = ''
+      }
       pointobj['seriesAll'] = [pointobj['series'], pointobj['seriesNum']].join(', ')
     } else {
       pointobj['series'] = undefined
@@ -47,12 +51,12 @@ d3.csv("goodreads_library_export.csv")
     pointobj['edYear'] = parseYear(d['Year Published'])
     pointobj['dateRead'] = parseDay(d['Date Read'])
     pointobj['dateAdded'] = parseDay(d['Date Added'])
+    console.log(pointobj)
     return pointobj
   })
   .get(function (error, data) {
-
+    console.log(data)
     // need to write a handler for books with no page count
-
     data = data.slice().sort(function (a, b) {
       return d3.ascending(a.author, b.author) || d3.ascending(a.seriesAll, b.seriesAll)
     })
@@ -96,6 +100,7 @@ d3.csv("goodreads_library_export.csv")
       // Create a shelf that has width swidth, with a number of shelves equal to numshelf, each sheight high
       // Return the starting points for each shelf as well as the right edge of the shelf
 
+      console.log("we made it")
       var shelfProperties = [];
 
       //iteratively create each shelf
@@ -366,7 +371,7 @@ d3.csv("goodreads_library_export.csv")
     // Add scroll buttons
 
     var leftButtonx = margin.left / 2;
-    var rightButtonx = caseBounds[caseInd].xouter + leftButtonx;
+    var rightButtonx = caseBounds[caseBounds.length - 1].xouter + leftButtonx;
     var leftButtony = ((caseBounds[0].ylower - caseBounds[0].yupper) / 2) + caseBounds[0].yupper;
     var rightButtony = leftButtony;
     var buttonr = margin.left * 0.25
@@ -467,8 +472,14 @@ d3.csv("goodreads_library_export.csv")
 
 
     // update button properties
-    buttonGroup.selectAll(".right")
-      .classed("active", true)
+    if (bookInd < numberbooks) {
+      buttonGroup.selectAll(".right")
+        .classed("active", true)
+    } else {
+      buttonGroup.selectAll(".right")
+        .classed("inactive", true)
+    }
+
     buttonGroup.selectAll(".left")
       .classed("inactive", true)
 
@@ -493,7 +504,7 @@ d3.csv("goodreads_library_export.csv")
 
     fake_div.remove();
 
-    var buttonDuration = 100;
+    var buttonDuration = 130;
     var buttonDelay = 0;
 
     var fake_div = d3.select('body')
@@ -531,8 +542,14 @@ d3.csv("goodreads_library_export.csv")
     buttonGroup.selectAll("text.btext.left")
       .style("fill", inactiveStroke)
 
-    buttonGroup.selectAll("text.btext.right")
-      .style("fill", activeStroke)
+    if (bookInd < numberbooks) {
+      buttonGroup.selectAll("text.btext.right")
+        .style("fill", activeStroke)
+    } else {
+      buttonGroup.selectAll("text.btext.right")
+        .style("fill", inactiveStroke)
+    }
+
 
     function moveRight() {
       if (bookInd < numberbooks) {

@@ -5,6 +5,8 @@
   --highlightstroke: #C15C66;
   --lowlight: #B1AE91;
   --lowlightstroke: #DBD9C1;
+  --current: #6D68B3;
+  --currentstroke: #9693C3;
 }
 
 html, body {
@@ -61,6 +63,11 @@ div {
   stroke: var(--highlightstroke);
   stroke-width: 1.5;
 }
+.currently-reading{
+  fill: var(--current);
+  stroke: var(--currentstroke);
+  stroke-width: 1.25;
+}
 
 /*                             BUTTON                                         */
 
@@ -84,5 +91,5 @@ div {
 .button.clicked{
   fill: #40474B;
   stroke: #1E2124;
-  stroke-width: 5;
+  stroke-width: 6;
 }
