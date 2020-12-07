@@ -201,32 +201,30 @@ d3.csv("goodreads_library_export.csv")
 
     var caseInd = 0;
     var totalCase = 0;
-    var caseLabels = [1];
+    var visibleCases = [0];
 
     var shelfExtent = caseBounds[caseInd].xouter + caseGap
     var availSpace = twidth - margin.right
-    console.log(shelfExtent, availSpace, twidth)
     // Create as many more bookshelves as needed
     // Break out if the next case would put us beyond the bounds of page
 
     while (true) {
       shelfExtent = caseBounds[caseInd].xouter + (caseThickness * 2) + swidth + (caseGap * 2)
-      console.log(shelfExtent, availSpace, twidth)
       if (shelfExtent <= availSpace) {
         currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap);
         caseBounds.push(currentCase[0]);
         caseShelves.push(currentCase[1]);
         totalCase += 1;
         caseInd += 1;
-        caseLabels.push(caseInd + 1)
+        visibleCases.push(caseInd)
       } else {
         break
       }
     };
 
-    function labelCases(caseLabels) {
+    function labelCases(visibleCases) {
       labelInfo = []
-      for (i = 0; i < caseLabels.length; i++) {
+      for (i = 0; i < visibleCases.length; i++) {
         var x = ((caseBounds[i].xouter - caseBounds[i].xinner) / 2) + caseBounds[i].xinner
         var y = caseBounds[i].yupper
         var w = swidth * 0.6
@@ -237,7 +235,7 @@ d3.csv("goodreads_library_export.csv")
           'w': w,
           'h': h,
           'size': h,
-          'label': 'Shelf ' + (i + 1)
+          'label': 'Shelf ' + (visibleCases[i] + 1)
         }
         labelInfo.push(info)
       }
@@ -278,7 +276,7 @@ d3.csv("goodreads_library_export.csv")
           return d.size + " px";
         })
     }
-    labelCases(caseLabels)
+    labelCases(visibleCases)
 
 
     var tooltip = d3.select("body")
@@ -297,7 +295,6 @@ d3.csv("goodreads_library_export.csv")
       var vertices = []
 
       for (i = bookInd; i < numberbooks; i++) {
-        console.log(bookInd)
         var booklength = data[i].numPage * pg2px
         if ((x0 + booklength) > (caseShelves[caseInd][shelfInd].x + swidth - bookGap)) {
           // If shelf is full, move to the next shelf in the case, or if there
@@ -349,9 +346,6 @@ d3.csv("goodreads_library_export.csv")
           return "book " + data[i].status;
         })
         .on("mousemove", function (d, i) {
-          console.log(i)
-          console.log(bookIndStart)
-          console.log(numberbooks)
           tooltip.style("opacity", "1")
             .style("left", d[2][0] + "px")
             .style("top", d[2][1] + "px")
@@ -546,6 +540,11 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", activeFill)
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
+        visibleCases = visibleCases.map(function (item) {
+          // Increment each item by 1
+          return item + (totalCase + 1);
+        });
+        labelCases(visibleCases)
         shelveBooks(bookInfo)
 
       } else {
@@ -565,6 +564,12 @@ d3.csv("goodreads_library_export.csv")
             .style("fill", inactiveFill)
             .style("stroke", inactiveStroke)
             .style("stroke-width", inactiveWidth)
+          visibleCases = visibleCases.map(function (item) {
+            // Increment each item by 1
+            return item + (totalCase + 1);
+          });
+          labelCases(visibleCases)
+          shelveBooks(bookInfo)
         } else {
           buttonGroup.selectAll(".right")
             .classed("active", false)
@@ -597,6 +602,12 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", activeFill)
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
+        visibleCases = visibleCases.map(function (item) {
+          // Increment each item by 1
+          return item - (totalCase + 1);
+        });
+        labelCases(visibleCases)
+        shelveBooks(bookInfo)
       } else {
         if (buttonGroup.selectAll(".left").classed("active")) {
           buttonGroup.selectAll(".left")
@@ -614,6 +625,12 @@ d3.csv("goodreads_library_export.csv")
             .style("fill", inactiveFill)
             .style("stroke", inactiveStroke)
             .style("stroke-width", inactiveWidth)
+          visibleCases = visibleCases.map(function (item) {
+            // Increment each item by 1
+            return item - (totalCase + 1);
+          });
+          labelCases(visibleCases)
+          shelveBooks(bookInfo)
         } else {
           buttonGroup.selectAll(".left")
             .classed("active", false)
@@ -638,7 +655,6 @@ d3.csv("goodreads_library_export.csv")
           .style("stroke", inactiveStroke)
           .style("stroke-width", inactiveWidth)
       }
-      shelveBooks(bookInfo)
     }
 
     buttonGroup.selectAll(".right")
