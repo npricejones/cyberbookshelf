@@ -1,12 +1,20 @@
 var parseDay = d3.timeParse("%Y/%m/%d")
 var parseYear = d3.timeParse("%Y")
-d3.csv("goodreads_library_export_ogrady.csv")
+d3.csv("goodreads_library_export.csv")
   .row(function (d) {
     var pointobj = {}
     authorlist = [d['Author']].concat(d['Additional Authors'].split(', '))
     // Strings
-
-    pointobj['author'] = d['Author l-f']
+    // Handler for if the Author's name has a preceding apostrophe
+    // This is really chunky, may exclude unintended names
+    // Are the cases I want to handle always a single letter?
+    // Maybe just do case check
+    if (d['Author l-f'].includes("'")) {
+      auth = d['Author l-f'].split("'")
+      pointobj['author'] = auth[1]
+    } else {
+      pointobj['author'] = d['Author l-f']
+    }
     if (d['Additional Authors']) {
       pointobj['authors'] = authorlist.join(', ')
       var firstAuthors = authorlist.slice(0, 2)
@@ -51,14 +59,13 @@ d3.csv("goodreads_library_export_ogrady.csv")
     pointobj['edYear'] = parseYear(d['Year Published'])
     pointobj['dateRead'] = parseDay(d['Date Read'])
     pointobj['dateAdded'] = parseDay(d['Date Added'])
-    console.log(pointobj)
     return pointobj
   })
   .get(function (error, data) {
-    console.log(data)
     // need to write a handler for books with no page count
+    sortkey = 'author'
     data = data.slice().sort(function (a, b) {
-      return d3.ascending(a.author, b.author) || d3.ascending(a.seriesAll, b.seriesAll)
+      return d3.ascending(a['author'], b['author']) || d3.ascending(a.seriesAll, b.seriesAll)
     })
 
     var numberbooks = data.length
@@ -69,8 +76,8 @@ d3.csv("goodreads_library_export_ogrady.csv")
     var margin = {
       left: 100,
       right: 100,
-      top: 40,
-      bottom: 0
+      top: 30,
+      bottom: 30
     }
 
 
@@ -207,6 +214,10 @@ d3.csv("goodreads_library_export_ogrady.csv")
     var caseInd = 0;
     var totalCase = 0;
     var visibleCases = [0];
+    var caseLimits = [{
+      'start': '',
+      'end': ''
+    }]
 
     var shelfExtent = caseBounds[caseInd].xouter + caseGap
     var availSpace = twidth - margin.right
@@ -222,12 +233,16 @@ d3.csv("goodreads_library_export_ogrady.csv")
         totalCase += 1;
         caseInd += 1;
         visibleCases.push(caseInd)
+        caseLimits.push({
+          'start': '',
+          'end': ''
+        })
       } else {
         break
       }
     };
 
-    function labelCases(visibleCases) {
+    function labelCases(visibleCases, caseLimits) {
       labelInfo = []
       for (i = 0; i < visibleCases.length; i++) {
         var x = ((caseBounds[i].xouter - caseBounds[i].xinner) / 2) + caseBounds[i].xinner
@@ -240,7 +255,7 @@ d3.csv("goodreads_library_export_ogrady.csv")
           'w': w,
           'h': h,
           'size': h,
-          'label': 'Shelf ' + (visibleCases[i] + 1)
+          'label': 'Shelf ' + (visibleCases[i] + 1) + ' (' + caseLimits[i].start + '-' + caseLimits[i].end + ')'
         }
         labelInfo.push(info)
       }
@@ -281,9 +296,6 @@ d3.csv("goodreads_library_export_ogrady.csv")
           return d.size + " px";
         })
     }
-    labelCases(visibleCases)
-
-
     var tooltip = d3.select("body")
       .append("div")
       .style("opacity", "0")
@@ -294,6 +306,7 @@ d3.csv("goodreads_library_export_ogrady.csv")
     function prepBooks(bookInd) {
       caseInd = 0
       var shelfInd = 0
+      var caseTracker = 0
       var x0 = caseShelves[caseInd][shelfInd].x + bookGap
       var y0 = caseShelves[caseInd][shelfInd].y - 1.1
 
@@ -308,16 +321,28 @@ d3.csv("goodreads_library_export_ogrady.csv")
             shelfInd += 1
             x0 = caseShelves[caseInd][shelfInd].x + bookGap
             y0 = caseShelves[caseInd][shelfInd].y - 1.1
+            caseTracker += 1
           } else {
             if (caseInd < totalCase) {
+              caseLimits[caseInd].end = data[i][sortkey][0]
+              console.log(data[i][sortkey])
               caseInd += 1
               shelfInd = 0
               x0 = caseShelves[caseInd][shelfInd].x + bookGap
               y0 = caseShelves[caseInd][shelfInd].y - 1.1
+              caseLimits[caseInd].start = data[i][sortkey][0]
+              caseTracker = 1
             } else {
+              caseLimits[caseInd].end = data[i - 1][sortkey][0]
               break
             }
           }
+        }
+        if (caseTracker === 0) {
+          caseLimits[caseInd].start = data[i][sortkey][0]
+        }
+        if (i === (numberbooks - 1)) {
+          caseLimits[caseInd].end = data[i][sortkey][0]
         }
         // Create bounds of books
         bottomL = [x0, y0]
@@ -328,11 +353,18 @@ d3.csv("goodreads_library_export_ogrady.csv")
         x0 += booklength + bookGap
         vertices.push(bookshape)
       }
+      if (caseInd < totalCase) {
+        for (var j = caseInd + 1; j <= totalCase; j += 1) {
+          caseLimits[j].start = ''
+          caseLimits[j].end = ''
+        }
+      }
 
       return {
         'bookIndStart': bookInd,
         'bookIndEnd': i,
-        'vertices': vertices
+        'vertices': vertices,
+        'caseLimits': caseLimits
       };
     }
 
@@ -366,6 +398,7 @@ d3.csv("goodreads_library_export_ogrady.csv")
     var bookIndStart = firstBook[casePosition]
     bookInfo = prepBooks(firstBook[casePosition])
     bookInd = shelveBooks(bookInfo)
+    labelCases(visibleCases, bookInfo.caseLimits)
 
 
     // Add scroll buttons
@@ -612,7 +645,7 @@ d3.csv("goodreads_library_export_ogrady.csv")
           // Increment each item by 1
           return item + (totalCase + 1);
         });
-        labelCases(visibleCases)
+        labelCases(visibleCases, bookInfo.caseLimits)
         shelveBooks(bookInfo)
 
       } else {
@@ -646,7 +679,7 @@ d3.csv("goodreads_library_export_ogrady.csv")
             // Increment each item by 1
             return item + (totalCase + 1);
           });
-          labelCases(visibleCases)
+          labelCases(visibleCases, bookInfo.caseLimits)
           shelveBooks(bookInfo)
         } else {
           buttonGroup.selectAll(".right")
@@ -697,7 +730,7 @@ d3.csv("goodreads_library_export_ogrady.csv")
           // Increment each item by 1
           return item - (totalCase + 1);
         });
-        labelCases(visibleCases)
+        labelCases(visibleCases, bookInfo.caseLimits)
         shelveBooks(bookInfo)
       } else {
         if (buttonGroup.selectAll(".left").classed("active")) {
@@ -730,7 +763,7 @@ d3.csv("goodreads_library_export_ogrady.csv")
             // Increment each item by 1
             return item - (totalCase + 1);
           });
-          labelCases(visibleCases)
+          labelCases(visibleCases, bookInfo.caseLimits)
           shelveBooks(bookInfo)
         } else {
           buttonGroup.selectAll(".left")
