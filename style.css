@@ -4,7 +4,7 @@
   --highlight: #A23E48;
   --highlightstroke: #C15C66;
   --lowlight: #B1AE91;
-  --lowlightstroke: #837F5D;
+  --lowlightstroke: #DBD9C1;
 }
 
 html, body {
@@ -12,10 +12,26 @@ html, body {
   height: 100%;
 }
 
+div {
+  font-family: Helvetica;
+}
+
 /*                             BOOKCASES                                     */
 .case {
   fill: var(--brown);
   stroke: black;
+}
+
+.labels{
+  fill: #C19219;
+  stroke: #574310;
+  stroke-width: 2;
+}
+
+.labeltext {
+  fill: #2D2309;
+  font-family: Helvetica;
+  font-weight: bold;
 }
 
 /* order matters */

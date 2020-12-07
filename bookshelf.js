@@ -106,6 +106,7 @@ d3.csv("goodreads_library_export.csv")
         // create shadow for background
         var shelfBack = {
           "name": "background",
+          "ind": i,
           "x": xstart + (0.5 * caseThickness),
           "y": y0 - (shelfThickness * 0.5),
           "height": sheight + shelfThickness,
@@ -200,24 +201,84 @@ d3.csv("goodreads_library_export.csv")
 
     var caseInd = 0;
     var totalCase = 0;
+    var caseLabels = [1];
 
-    var shelfExtent = caseBounds[caseInd].xouter + swidth + (caseThickness * 2) + (caseGap * caseInd)
-    var availSpace = twidth - margin.right - margin.left
+    var shelfExtent = caseBounds[caseInd].xouter + caseGap
+    var availSpace = twidth - margin.right
+    console.log(shelfExtent, availSpace, twidth)
     // Create as many more bookshelves as needed
     // Break out if the next case would put us beyond the bounds of page
+
     while (true) {
-      if (shelfExtent < availSpace) {
+      shelfExtent = caseBounds[caseInd].xouter + (caseThickness * 2) + swidth + (caseGap * 2)
+      console.log(shelfExtent, availSpace, twidth)
+      if (shelfExtent <= availSpace) {
         currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap);
-        shelfExtent = caseBounds[caseInd].xouter + swidth + (caseThickness * 2) + (caseGap * caseInd)
         caseBounds.push(currentCase[0]);
         caseShelves.push(currentCase[1]);
         totalCase += 1;
         caseInd += 1;
+        caseLabels.push(caseInd + 1)
       } else {
         break
       }
-
     };
+
+    function labelCases(caseLabels) {
+      labelInfo = []
+      for (i = 0; i < caseLabels.length; i++) {
+        var x = ((caseBounds[i].xouter - caseBounds[i].xinner) / 2) + caseBounds[i].xinner
+        var y = caseBounds[i].yupper
+        var w = swidth * 0.6
+        var h = 0.95 * (sheight - bheight)
+        info = {
+          'x': x - (w / 2),
+          'y': y,
+          'w': w,
+          'h': h,
+          'size': h,
+          'label': 'Shelf ' + (i + 1)
+        }
+        labelInfo.push(info)
+      }
+      svg.selectAll("rect.labels").remove()
+      svg.selectAll("text.labeltext").remove()
+      svg.selectAll("rect.labels")
+        .data(labelInfo)
+        .enter().append("rect")
+        .attr("x", function (d, i) {
+          return d.x
+        })
+        .attr("y", function (d, i) {
+          return d.y
+        })
+        .attr("width", function (d, i) {
+          return d.w
+        })
+        .attr("height", function (d, i) {
+          return d.h
+        })
+        .attr("class", "labels")
+      svg.selectAll("text.labeltext")
+        .data(labelInfo)
+        .enter().append("text")
+        .text(function (d, i) {
+          return d.label
+        })
+        .attr("x", function (d, i) {
+          return d.x + (d.w / 2)
+        })
+        .attr("y", function (d, i) {
+          return d.y + (d.h * 0.75)
+        })
+        .attr("class", "labeltext")
+        .attr("text-anchor", "middle")
+        .attr("alignment-baseline", "middle")
+        .style("font-size", function (d, i) {
+          return d.size + " px";
+        })
+    }
+    labelCases(caseLabels)
 
 
     var tooltip = d3.select("body")
@@ -227,11 +288,7 @@ d3.csv("goodreads_library_export.csv")
 
     var bookGroup = svg.append("g")
 
-    function shelveBooks(bookInd) {
-      // remove all extant books
-
-      bookGroup.selectAll(".book").remove()
-
+    function prepBooks(bookInd) {
       caseInd = 0
       var shelfInd = 0
       var x0 = caseShelves[caseInd][shelfInd].x + bookGap
@@ -250,19 +307,13 @@ d3.csv("goodreads_library_export.csv")
             x0 = caseShelves[caseInd][shelfInd].x + bookGap
             y0 = caseShelves[caseInd][shelfInd].y - 1.1
           } else {
-            // Break out if the next case would put us beyond the bounds of page
-            if ((caseBounds[caseInd].xouter + swidth + caseThickness * 2) > twidth) {
-              break;
-              // Otherwise create a new shelf
-            } else {
-              currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap)
-              totalCase += 1
+            if (caseInd < totalCase) {
               caseInd += 1
-              caseBounds.push(currentCase[0])
-              caseShelves.push(currentCase[1])
               shelfInd = 0
               x0 = caseShelves[caseInd][shelfInd].x + bookGap
               y0 = caseShelves[caseInd][shelfInd].y - 1.1
+            } else {
+              break
             }
           }
         }
@@ -276,6 +327,18 @@ d3.csv("goodreads_library_export.csv")
         vertices.push(bookshape)
       }
 
+      return {
+        'bookIndStart': bookInd,
+        'bookIndEnd': i,
+        'vertices': vertices
+      };
+    }
+
+    function shelveBooks(bookInfo) {
+      bookIndStart = bookInfo.bookIndStart
+      vertices = bookInfo.vertices
+      bookGroup.selectAll(".book").remove()
+
       bookGroup.selectAll("path.book")
         .data(vertices)
         .enter().append("path")
@@ -286,18 +349,25 @@ d3.csv("goodreads_library_export.csv")
           return "book " + data[i].status;
         })
         .on("mousemove", function (d, i) {
+          console.log(i)
+          console.log(bookIndStart)
+          console.log(numberbooks)
           tooltip.style("opacity", "1")
             .style("left", d[2][0] + "px")
             .style("top", d[2][1] + "px")
-          tooltip.html(data[i + bookInd].title + "<br>by: " + data[i + bookInd].displayAuthors)
+          tooltip.html(data[i + bookIndStart].title + "<br>by: " + data[i + bookIndStart].displayAuthors)
         })
-      return i;
+      return bookInfo.bookIndEnd;
+
     }
 
     // Populate first shelf
     var casePosition = 0
     var firstBook = [0]
-    bookInd = shelveBooks(firstBook[casePosition])
+    var bookIndStart = firstBook[casePosition]
+    bookInfo = prepBooks(firstBook[casePosition])
+    bookInd = shelveBooks(bookInfo)
+
 
     // Add scroll buttons
 
@@ -440,8 +510,11 @@ d3.csv("goodreads_library_export.csv")
         casePosition = casePosition + 1
         firstBook.push(bookInd)
       }
-      bookInd = shelveBooks(firstBook[casePosition])
-      if (bookInd > 0) {
+      bookIndStart = firstBook[casePosition]
+      bookInfo = prepBooks(bookIndStart)
+      bookInd = bookInfo.bookIndEnd
+      // Change left button appearance
+      if (bookIndStart > 0) {
         buttonGroup.selectAll(".left")
           .classed("inactive", false)
           .classed("active", true)
@@ -456,6 +529,7 @@ d3.csv("goodreads_library_export.csv")
           .style("stroke", inactiveStroke)
           .style("stroke-width", inactiveWidth)
       }
+      // Change right button appearance
       if (bookInd < numberbooks) {
         buttonGroup.selectAll(".right")
           .classed("inactive", false)
@@ -472,6 +546,7 @@ d3.csv("goodreads_library_export.csv")
           .style("fill", activeFill)
           .style("stroke", activeStroke)
           .style("stroke-width", activeWidth)
+        shelveBooks(bookInfo)
 
       } else {
         if (buttonGroup.selectAll(".right").classed("active")) {
@@ -503,8 +578,10 @@ d3.csv("goodreads_library_export.csv")
 
     function moveLeft() {
       casePosition = d3.max([0, casePosition - 1])
-      bookInd = shelveBooks(firstBook[casePosition])
-      if (firstBook[casePosition] > 0) {
+      bookIndStart = firstBook[casePosition]
+      bookInfo = prepBooks(bookIndStart)
+      bookInd = bookInfo.bookIndEnd
+      if (bookIndStart > 0) {
         buttonGroup.selectAll(".left")
           .classed("inactive", false)
           .classed("active", true)
@@ -561,6 +638,7 @@ d3.csv("goodreads_library_export.csv")
           .style("stroke", inactiveStroke)
           .style("stroke-width", inactiveWidth)
       }
+      shelveBooks(bookInfo)
     }
 
     buttonGroup.selectAll(".right")
@@ -587,7 +665,4 @@ d3.csv("goodreads_library_export.csv")
           moveLeft();
         }
       })
-    // add scroll tracking?
-
-
   })
