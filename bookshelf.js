@@ -313,7 +313,12 @@ d3.csv("goodreads_library_export.csv")
       var vertices = []
 
       for (i = bookInd; i < numberbooks; i++) {
-        var booklength = data[i].numPage * pg2px
+        if (data[i].numPage) {
+          var booklength = data[i].numPage * pg2px
+        } else {
+          var booklength = 200 * pg2px
+        }
+
         if ((x0 + booklength) > (caseShelves[caseInd][shelfInd].x + swidth - bookGap)) {
           // If shelf is full, move to the next shelf in the case, or if there
           // are no shelves, move to the next case
