@@ -73,13 +73,14 @@ div {
 
 .btext{
   font-family: Helvetica;
-  font-weight: bold;
+  font-weight: normal;
 }
 
 .button.inactive{
   fill: #B4C6CF;
   stroke: #9DB4C0;
   stroke-width: 4;
+  opacity: 0;
 }
 
 .button.active{
