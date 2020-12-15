@@ -12,6 +12,17 @@ function invertline(y, x0, y0, angle) {
   return ((y - y0) / m) + x0;
 }
 
+
+function fillArray(value, len) {
+  var arr = new Array(len);
+  for (var i = 0; i < len; i++) {
+    arr[i] = value;
+  }
+  return arr;
+}
+
+
+
 /**
  * loadWrapper interprets a library csv and shelves it
  * @param {function} interpretGR - name of function to parse rows
@@ -102,6 +113,105 @@ function shelveLibrary(data, sortkey = null) {
    * @param {Array} secondaryKeys - Array of secondary columns to sort by
    * @return {Array} Sorted version of input data
    */
+
+  //extract styles from css
+
+  // books
+  var fake_div = d3.select('body')
+    .append('div')
+    .attr('class', 'book read')
+    .style('display', 'none')
+  readFill = fake_div.style('fill');
+  readStroke = fake_div.style('stroke');
+  readWidth = fake_div.style('stroke-width');
+
+  fake_div.remove();
+
+  var fake_div = d3.select('body')
+    .append('div')
+    .attr('class', 'book to-read')
+    .style('display', 'none')
+  toreadFill = fake_div.style('fill');
+  toreadStroke = fake_div.style('stroke');
+  toreadWidth = fake_div.style('stroke-width');
+
+  fake_div.remove();
+
+  var fake_div = d3.select('body')
+    .append('div')
+    .attr('class', 'book current')
+    .style('display', 'none')
+  currentFill = fake_div.style('fill');
+  currentStroke = fake_div.style('stroke');
+  currentWidth = fake_div.style('stroke-width');
+
+  fake_div.remove();
+
+  var fake_div = d3.select('body')
+    .append('div')
+    .attr('class', 'book looking')
+    .style('display', 'none')
+  lookingFill = fake_div.style('fill');
+  lookingStroke = fake_div.style('stroke');
+  lookingWidth = fake_div.style('stroke-width');
+
+  fake_div.remove();
+
+  bookFill = {
+    'read': readFill,
+    'to-read': toreadFill,
+    'current': currentFill,
+    'looking': lookingFill
+  }
+
+  bookStroke = {
+    'read': readStroke,
+    'to-read': toreadStroke,
+    'current': currentStroke,
+    'looking': lookingStroke
+  }
+
+  bookWidth = {
+    'read': readWidth,
+    'to-read': toreadWidth,
+    'current': currentWidth,
+    'looking': lookingWidth
+  }
+
+  // buttons
+  var fake_div = d3.select('body')
+    .append('div')
+    .attr('class', 'button active')
+    .style('display', 'none')
+  activeFill = fake_div.style('fill');
+  activeStroke = fake_div.style('stroke');
+  activeWidth = fake_div.style('stroke-width');
+
+  fake_div.remove();
+
+  var fake_div = d3.select('body')
+    .append('div')
+    .attr('class', 'button inactive')
+    .style('display', 'none')
+  inactiveFill = fake_div.style('fill');
+  inactiveStroke = fake_div.style('stroke');
+  inactiveWidth = fake_div.style('stroke-width');
+
+  fake_div.remove();
+
+  var buttonDuration = 130;
+  var buttonDelay = 0;
+
+  var fake_div = d3.select('body')
+    .append('div')
+    .attr('class', 'button clicked')
+    .style('display', 'none')
+  clickedFill = fake_div.style('fill');
+  clickedStroke = fake_div.style('stroke');
+  clickedWidth = fake_div.style('stroke-width');
+
+  fake_div.remove();
+
   this.sortLibrary = function (data, sortkey = 'author',
     secondaryKeys = ['author', 'seriesAll', 'pubYear']) {
     // Precalc the number of seconday keys
@@ -166,10 +276,12 @@ function shelveLibrary(data, sortkey = null) {
     .attr("height", "100%")
     .attr("width", "100%");
 
+  /**
+   * makeshelf determines the positional information of a bookcase and draws it
+   * @param {Number} xstart - x position of the left edge of the bookcase
+   * @return {Array} Array containing the bounds at 0 and the shelfStarts at 1
+   */
   this.makeshelf = function (xstart) {
-    // Create a shelf that has width swidth, with a number of shelves equal to numshelf, each sheight high
-    // Return the starting points for each shelf as well as the right edge of the shelf
-
     var shelfProperties = [];
 
     //iteratively create each shelf
@@ -266,44 +378,12 @@ function shelveLibrary(data, sortkey = null) {
     return [bounds, shelfStarts];
   }
 
-
-
-  // Create first book shelf,
-  var currentCase = makeshelf(margin.left + 0);
-  var caseBounds = [currentCase[0]];
-  var caseShelves = [currentCase[1]];
-
-  var caseInd = 0;
-  var totalCase = 0;
-  var visibleCases = [0];
-  var caseLimits = [{
-    'start': '',
-    'end': ''
-  }]
-
-  var shelfExtent = caseBounds[caseInd].xouter + caseGap
-  var availSpace = twidth - margin.right
-  // Create as many more bookshelves as needed
-  // Break out if the next case would put us beyond the bounds of page
-
-  while (true) {
-    shelfExtent = caseBounds[caseInd].xouter + (caseThickness * 2) + swidth + (caseGap * 2)
-    if (shelfExtent <= availSpace) {
-      currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap);
-      caseBounds.push(currentCase[0]);
-      caseShelves.push(currentCase[1]);
-      totalCase += 1;
-      caseInd += 1;
-      visibleCases.push(caseInd)
-      caseLimits.push({
-        'start': '',
-        'end': ''
-      })
-    } else {
-      break
-    }
-  };
-
+  /**
+   * labelCases adds labels to the bookcases
+   * @param {Array} visibleCases - Array of indexes of visible bookcases
+   * @param {Array} caseLimits - Array of objects with start and end strings
+   * @return {null}
+   */
   this.labelCases = function (visibleCases, caseLimits) {
     labelInfo = []
     for (i = 0; i < visibleCases.length; i++) {
@@ -358,13 +438,12 @@ function shelveLibrary(data, sortkey = null) {
         return d.size + " px";
       })
   }
-  var tooltip = d3.select("body")
-    .append("div")
-    .attr("class", "tooltip")
-    .style("opacity", "0")
-    .style("position", "absolute")
 
-
+  /**
+   * prepBooks calculated coordinates for all books that will fit on the page
+   * @param {Array} bookInd - Index of first book to be shelved
+   * @return {Object} - Object that contains information about the shelves
+   */
   this.prepBooks = function (bookInd) {
     caseInd = 0
     var shelfInd = 0
@@ -434,6 +513,76 @@ function shelveLibrary(data, sortkey = null) {
     };
   }
 
+  /**
+   * chooseBook highlights the appearance of the selected book
+   * @param {Object} d - data point
+   * @param {Number} i - data index
+   * @return {null}
+   */
+  function chooseBook(d, i) {
+    // Keep track of what the previously selected book was so we can
+    // recolour it
+    lastBook = selectedBook
+    selectedBook = i
+    // If we haven't locked to a book, you can highlight a new one
+    if (d3.sum(lockedBook) == false) {
+      // If a book was previously selected, updated its colour
+      cleanLastBook(d, i)
+      // Highlight the selected book
+      d3.select("path.book.b" + selectedBook)
+        .style("fill", bookFill["looking"])
+        .style("stroke", bookStroke["looking"])
+        .style("stroke-width", bookWidth["looking"])
+      // Move the tooltip
+      tooltip.style("opacity", "1")
+        .style("left", d[2][0] + "px")
+        .style("top", d[2][1] + "px")
+      tooltip.html(data[i + bookIndStart].title + "<br>by: " + data[i + bookIndStart].displayAuthors)
+    }
+  }
+
+  /** @todo make an object such that if you click anywhere outside the
+  shelves you deselect current book */
+
+  function cleanLastBook(d, i) {
+    if (lastBook >= 0) {
+      bookType = data[lastBook].status
+      d3.selectAll("path.book.b" + lastBook)
+        .style("fill", bookFill[bookType])
+        .style("stroke", bookStroke[bookType])
+        .style("stroke-width", bookWidth[bookType])
+    }
+  }
+
+  /**
+   * lockBook highlights a book and prevents others from being highlighted
+   * If a book is already highlighted, this function then unlocks it
+   * @param {Object} d - data point
+   * @param {Number} i - data index
+   * @return {null}
+   */
+  function lockBook(d, i) {
+    // If no books are highlighted, highlight the current one
+    if (d3.sum(lockedBook) == false) {
+      lockedBook[i] = !lockedBook[i]
+    } else {
+      // If a book was locked, find its index
+      lastBook = lockedBook.findIndex(function (val) {
+        return val
+      })
+      // unlock previously highlighted book
+      lockedBook[lastBook] = false
+      // recolour the previously highlighted book
+      cleanLastBook(d, i)
+    }
+    // if we didn't lock to the current book, highlight the new book
+    chooseBook(d, i)
+  }
+  /**
+   * shelveBooks draws rectangles for each book
+   * @param {Object} bookInfo - Object with information about book positions
+   * @return {Number} Index of final book that was drawn
+   */
   this.shelveBooks = function (bookInfo) {
     bookIndStart = bookInfo.bookIndStart
     vertices = bookInfo.vertices
@@ -446,268 +595,191 @@ function shelveLibrary(data, sortkey = null) {
         return "M" + d.join("L") + "Z"
       })
       .attr("class", function (d, i) {
-        return "book " + data[i].status;
+        return "book " + data[i].status + " b" + i;
       })
-      .on("mousemove", function (d, i) {
-        tooltip.style("opacity", "1")
-          .style("left", d[2][0] + "px")
-          .style("top", d[2][1] + "px")
-        tooltip.html(data[i + bookIndStart].title + "<br>by: " + data[i + bookIndStart].displayAuthors)
-      })
+      .on("mouseover", chooseBook)
+      .on("click", lockBook)
     return bookInfo.bookIndEnd;
-
   }
 
-  // Populate first shelf
-  var casePosition = 0
-  var firstBook = [0]
-  var bookIndStart = firstBook[casePosition]
-  bookInfo = prepBooks(firstBook[casePosition])
-  bookInd = shelveBooks(bookInfo)
-  labelCases(visibleCases, bookInfo.caseLimits)
+  /**
+   * scrollButtons draws the buttons and assigns them behaviours
+   * @return {null}
+   */
+  this.scrollButtons = function () {
+    var leftButtonx = margin.left / 2;
+    var rightButtonx = caseBounds[caseBounds.length - 1].xouter + leftButtonx;
+    var leftButtony = ((caseBounds[0].ylower - caseBounds[0].yupper) / 2) + caseBounds[0].yupper;
+    var rightButtony = leftButtony;
+    var buttonr = margin.left * 0.25
+    var buttonfs = buttonr * 0.75
+
+    var buttons = [{
+      'cx': leftButtonx,
+      'cy': leftButtony,
+      'direction': 'left',
+      'label': 'previous',
+      'r': buttonr,
+      'size': buttonfs
+    }, {
+      'cx': rightButtonx,
+      'cy': rightButtony,
+      'direction': 'right',
+      'label': 'next',
+      'r': buttonr,
+      'size': buttonfs
+    }];
 
 
-  // Add scroll buttons
+    var buttonGroup = svg.append("g")
 
-  var leftButtonx = margin.left / 2;
-  var rightButtonx = caseBounds[caseBounds.length - 1].xouter + leftButtonx;
-  var leftButtony = ((caseBounds[0].ylower - caseBounds[0].yupper) / 2) + caseBounds[0].yupper;
-  var rightButtony = leftButtony;
-  var buttonr = margin.left * 0.25
-  var buttonfs = buttonr * 0.75
+    // button background
+    buttonGroup.selectAll("circle.button")
+      .data(buttons)
+      .enter().append("circle")
+      .attr("cx", function (d, i) {
+        return d.cx;
+      })
+      .attr("cy", function (d, i) {
+        return d.cy;
+      })
+      .attr("r", 25)
+      .attr("class", function (d, i) {
+        return "button " + d.direction;
+      })
 
-  var buttons = [{
-    'cx': leftButtonx,
-    'cy': leftButtony,
-    'direction': 'left',
-    'label': 'previous',
-    'r': buttonr,
-    'size': buttonfs
-  }, {
-    'cx': rightButtonx,
-    'cy': rightButtony,
-    'direction': 'right',
-    'label': 'next',
-    'r': buttonr,
-    'size': buttonfs
-  }];
+    // half opening angle of the arrow
+    var angle = 32 * Math.PI / 180 //radians
 
+    // arrow properties
+    var awidth = 20
+    var athick = 7
+    var abuffer = 3
 
-  var buttonGroup = svg.append("g")
+    // center the arrows
+    xstartL = buttons[0].cx - 1.2 * (awidth / 2)
+    ystartL = buttons[0].cy
 
-  // button background
-  buttonGroup.selectAll("circle.button")
-    .data(buttons)
-    .enter().append("circle")
-    .attr("cx", function (d, i) {
-      return d.cx;
-    })
-    .attr("cy", function (d, i) {
-      return d.cy;
-    })
-    .attr("r", 25)
-    .attr("class", function (d, i) {
-      return "button " + d.direction;
-    })
+    xstartR = buttons[1].cx + 1.2 * (awidth / 2)
+    ystartR = buttons[1].cy
 
-  // half opening angle of the arrow
-  var angle = 32 * Math.PI / 180 //radians
+    // create arrow vertices
+    var arrows = [
+      [
+        [xstartL, ystartL],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, angle)],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL - athick, angle)],
+        [invertline(ystartL, xstartL, ystartL - athick, angle), ystartL],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL + athick, -angle)],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, -angle)],
+        [xstartL, ystartL]
+      ], //left arrow
+      [
+        [xstartR, ystartR],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, -angle)],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR - athick, -angle)],
+        [invertline(ystartR, xstartR, ystartR - athick, -angle), ystartR],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR + athick, angle)],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, angle)],
+        [xstartR, ystartR]
+      ] // right arrow
+    ]
 
-  // arrow properties
-  var awidth = 20
-  var athick = 7
-  var abuffer = 3
-
-  // center the arrows
-  xstartL = buttons[0].cx - 1.2 * (awidth / 2)
-  ystartL = buttons[0].cy
-
-  xstartR = buttons[1].cx + 1.2 * (awidth / 2)
-  ystartR = buttons[1].cy
-
-  // create arrow vertices
-  var arrows = [
-    [
-      [xstartL, ystartL],
-      [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, angle)],
-      [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL - athick, angle)],
-      [invertline(ystartL, xstartL, ystartL - athick, angle), ystartL],
-      [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL + athick, -angle)],
-      [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, -angle)],
-      [xstartL, ystartL]
-    ], //left arrow
-    [
-      [xstartR, ystartR],
-      [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, -angle)],
-      [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR - athick, -angle)],
-      [invertline(ystartR, xstartR, ystartR - athick, -angle), ystartR],
-      [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR + athick, angle)],
-      [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, angle)],
-      [xstartR, ystartR]
-    ] // right arrow
-  ]
-
-  // draw the arrows
-  buttonGroup.selectAll("path.button")
-    .data(arrows)
-    .enter().append("path")
-    .attr("d", function (d) {
-      return "M" + d.join("L") + "Z"
-    })
-    .attr("class", function (d, i) {
-      return "button " + buttons[i].direction;
-    })
+    // draw the arrows
+    buttonGroup.selectAll("path.button")
+      .data(arrows)
+      .enter().append("path")
+      .attr("d", function (d) {
+        return "M" + d.join("L") + "Z"
+      })
+      .attr("class", function (d, i) {
+        return "button " + buttons[i].direction;
+      })
 
 
-  // update button properties
-  if (bookInd < numberbooks) {
-    buttonGroup.selectAll(".right")
-      .classed("active", true)
-  } else {
-    buttonGroup.selectAll(".right")
-      .classed("inactive", true)
-  }
-
-  buttonGroup.selectAll(".left")
-    .classed("inactive", true)
-
-  //extract styles from css
-  var fake_div = d3.select('body')
-    .append('div')
-    .attr('class', 'button active')
-    .style('display', 'none')
-  activeFill = fake_div.style('fill');
-  activeStroke = fake_div.style('stroke');
-  activeWidth = fake_div.style('stroke-width');
-
-  fake_div.remove();
-
-  var fake_div = d3.select('body')
-    .append('div')
-    .attr('class', 'button inactive')
-    .style('display', 'none')
-  inactiveFill = fake_div.style('fill');
-  inactiveStroke = fake_div.style('stroke');
-  inactiveWidth = fake_div.style('stroke-width');
-
-  fake_div.remove();
-
-  var buttonDuration = 130;
-  var buttonDelay = 0;
-
-  var fake_div = d3.select('body')
-    .append('div')
-    .attr('class', 'button clicked')
-    .style('display', 'none')
-  clickedFill = fake_div.style('fill');
-  clickedStroke = fake_div.style('stroke');
-  clickedWidth = fake_div.style('stroke-width');
-
-  fake_div.remove();
-
-  buttonGroup.selectAll("text.btext")
-    .data(buttons)
-    .enter().append("text")
-    .text(function (d, i) {
-      return d.label
-    })
-    .attr("x", function (d, i) {
-      return d.cx
-    })
-    .attr("y", function (d, i) {
-      return d.cy + (1.75 * d.r)
-    })
-    .attr("class", function (d, i) {
-      return "button btext " + d.direction
-    })
-    .attr("text-anchor", "middle")
-    .attr("alignment-baseline", "middle")
-    .style("font-size", function (d, i) {
-      return d.size + "px";
-    })
-    .style("stroke-width", 0)
-
-  buttonGroup.selectAll("text.btext.left")
-    .style("fill", inactiveStroke)
-
-  if (bookInd < numberbooks) {
-    buttonGroup.selectAll("text.btext.right")
-      .style("fill", activeStroke)
-  } else {
-    buttonGroup.selectAll("text.btext.right")
-      .style("fill", inactiveStroke)
-  }
-
-
-  function moveRight() {
-    if (bookInd < numberbooks) {
-      casePosition = casePosition + 1
-      firstBook.push(bookInd)
-    }
-    bookIndStart = firstBook[casePosition]
-    bookInfo = prepBooks(bookIndStart)
-    bookInd = bookInfo.bookIndEnd
-    // Change left button appearance
-    if (bookIndStart > 0) {
-      buttonGroup.selectAll(".left")
-        .classed("inactive", false)
-        .classed("active", true)
-        .style("fill", activeFill)
-        .style("stroke", activeStroke)
-        .style("stroke-width", activeWidth)
-      buttonGroup.selectAll("text.btext.left")
-        .style("stroke-width", 0)
-        .style("fill", activeStroke)
-    } else {
-      buttonGroup.selectAll(".left")
-        .classed("active", false)
-        .classed("inactive", true)
-        .style("fill", inactiveFill)
-        .style("stroke", inactiveStroke)
-        .style("stroke-width", inactiveWidth)
-      buttonGroup.selectAll("text.btext.left")
-        .style("stroke-width", 0)
-        .style("fill", inactiveStroke)
-    }
-    // Change right button appearance
+    // update button properties
     if (bookInd < numberbooks) {
       buttonGroup.selectAll(".right")
-        .classed("inactive", false)
         .classed("active", true)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", clickedFill)
-        .style("stroke", clickedStroke)
-        .style("stroke-width", clickedWidth)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", activeFill)
-        .style("stroke", activeStroke)
-        .style("stroke-width", activeWidth)
-      buttonGroup.selectAll("text.btext.right")
-        .style("stroke-width", 0)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", clickedStroke)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", activeStroke)
-      visibleCases = visibleCases.map(function (item) {
-        // Increment each item by 1
-        return item + (totalCase + 1);
-      });
-      labelCases(visibleCases, bookInfo.caseLimits)
-      shelveBooks(bookInfo)
-
     } else {
-      if (buttonGroup.selectAll(".right").classed("active")) {
-        buttonGroup.selectAll(".right")
+      buttonGroup.selectAll(".right")
+        .classed("inactive", true)
+    }
+
+    buttonGroup.selectAll(".left")
+      .classed("inactive", true)
+
+    buttonGroup.selectAll("text.btext")
+      .data(buttons)
+      .enter().append("text")
+      .text(function (d, i) {
+        return d.label
+      })
+      .attr("x", function (d, i) {
+        return d.cx
+      })
+      .attr("y", function (d, i) {
+        return d.cy + (1.75 * d.r)
+      })
+      .attr("class", function (d, i) {
+        return "button btext " + d.direction
+      })
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .style("font-size", function (d, i) {
+        return d.size + "px";
+      })
+      .style("stroke-width", 0)
+
+    buttonGroup.selectAll("text.btext.left")
+      .style("fill", inactiveStroke)
+
+    if (bookInd < numberbooks) {
+      buttonGroup.selectAll("text.btext.right")
+        .style("fill", activeStroke)
+    } else {
+      buttonGroup.selectAll("text.btext.right")
+        .style("fill", inactiveStroke)
+    }
+
+
+    function moveRight() {
+      if (bookInd < numberbooks) {
+        casePosition = casePosition + 1
+        firstBook.push(bookInd)
+      }
+      bookIndStart = firstBook[casePosition]
+      bookInfo = prepBooks(bookIndStart)
+      selectedBook = -1
+      lockedBook = fillArray(false, bookInfo.vertices.length)
+      bookInd = bookInfo.bookIndEnd
+      // Change left button appearance
+      if (bookIndStart > 0) {
+        buttonGroup.selectAll(".left")
+          .classed("inactive", false)
+          .classed("active", true)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .style("fill", activeStroke)
+      } else {
+        buttonGroup.selectAll(".left")
           .classed("active", false)
           .classed("inactive", true)
+          .style("fill", inactiveFill)
+          .style("stroke", inactiveStroke)
+          .style("stroke-width", inactiveWidth)
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .style("fill", inactiveStroke)
+      }
+      // Change right button appearance
+      if (bookInd < numberbooks) {
+        buttonGroup.selectAll(".right")
+          .classed("inactive", false)
+          .classed("active", true)
           .transition()
           .duration(buttonDuration)
           .delay(buttonDelay)
@@ -717,9 +789,9 @@ function shelveLibrary(data, sortkey = null) {
           .transition()
           .duration(buttonDuration)
           .delay(buttonDelay)
-          .style("fill", inactiveFill)
-          .style("stroke", inactiveStroke)
-          .style("stroke-width", inactiveWidth)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
         buttonGroup.selectAll("text.btext.right")
           .style("stroke-width", 0)
           .transition()
@@ -729,69 +801,72 @@ function shelveLibrary(data, sortkey = null) {
           .transition()
           .duration(buttonDuration)
           .delay(buttonDelay)
-          .style("fill", inactiveStroke)
+          .style("fill", activeStroke)
         visibleCases = visibleCases.map(function (item) {
           // Increment each item by 1
           return item + (totalCase + 1);
         });
         labelCases(visibleCases, bookInfo.caseLimits)
         shelveBooks(bookInfo)
+
       } else {
-        buttonGroup.selectAll(".right")
-          .classed("active", false)
-          .classed("inactive", true)
-          .style("fill", inactiveFill)
-          .style("stroke", inactiveStroke)
-          .style("stroke-width", inactiveWidth)
-        buttonGroup.selectAll("text.btext.right")
-          .style("fill", inactiveStroke)
-          .style("stroke-width", 0)
+        if (buttonGroup.selectAll(".right").classed("active")) {
+          buttonGroup.selectAll(".right")
+            .classed("active", false)
+            .classed("inactive", true)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedFill)
+            .style("stroke", clickedStroke)
+            .style("stroke-width", clickedWidth)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.right")
+            .style("stroke-width", 0)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedStroke)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveStroke)
+          visibleCases = visibleCases.map(function (item) {
+            // Increment each item by 1
+            return item + (totalCase + 1);
+          });
+          labelCases(visibleCases, bookInfo.caseLimits)
+          shelveBooks(bookInfo)
+        } else {
+          buttonGroup.selectAll(".right")
+            .classed("active", false)
+            .classed("inactive", true)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.right")
+            .style("fill", inactiveStroke)
+            .style("stroke-width", 0)
+        }
       }
     }
-  }
 
-  function moveLeft() {
-    casePosition = d3.max([0, casePosition - 1])
-    bookIndStart = firstBook[casePosition]
-    bookInfo = prepBooks(bookIndStart)
-    bookInd = bookInfo.bookIndEnd
-    if (bookIndStart > 0) {
-      buttonGroup.selectAll(".left")
-        .classed("inactive", false)
-        .classed("active", true)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", clickedFill)
-        .style("stroke", clickedStroke)
-        .style("stroke-width", clickedWidth)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", activeFill)
-        .style("stroke", activeStroke)
-        .style("stroke-width", activeWidth)
-      buttonGroup.selectAll("text.btext.left")
-        .style("stroke-width", 0)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", clickedStroke)
-        .transition()
-        .duration(buttonDuration)
-        .delay(buttonDelay)
-        .style("fill", activeStroke)
-      visibleCases = visibleCases.map(function (item) {
-        // Increment each item by 1
-        return item - (totalCase + 1);
-      });
-      labelCases(visibleCases, bookInfo.caseLimits)
-      shelveBooks(bookInfo)
-    } else {
-      if (buttonGroup.selectAll(".left").classed("active")) {
+    function moveLeft() {
+      casePosition = d3.max([0, casePosition - 1])
+      bookIndStart = firstBook[casePosition]
+      bookInfo = prepBooks(bookIndStart)
+      selectedBook = -1
+      lockedBook = fillArray(false, bookInfo.vertices.length)
+      bookInd = bookInfo.bookIndEnd
+      if (bookIndStart > 0) {
         buttonGroup.selectAll(".left")
-          .classed("active", false)
-          .classed("inactive", true)
+          .classed("inactive", false)
+          .classed("active", true)
           .transition()
           .duration(buttonDuration)
           .delay(buttonDelay)
@@ -801,9 +876,9 @@ function shelveLibrary(data, sortkey = null) {
           .transition()
           .duration(buttonDuration)
           .delay(buttonDelay)
-          .style("fill", inactiveFill)
-          .style("stroke", inactiveStroke)
-          .style("stroke-width", inactiveWidth)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
         buttonGroup.selectAll("text.btext.left")
           .style("stroke-width", 0)
           .transition()
@@ -813,7 +888,7 @@ function shelveLibrary(data, sortkey = null) {
           .transition()
           .duration(buttonDuration)
           .delay(buttonDelay)
-          .style("fill", inactiveStroke)
+          .style("fill", activeStroke)
         visibleCases = visibleCases.map(function (item) {
           // Increment each item by 1
           return item - (totalCase + 1);
@@ -821,62 +896,164 @@ function shelveLibrary(data, sortkey = null) {
         labelCases(visibleCases, bookInfo.caseLimits)
         shelveBooks(bookInfo)
       } else {
-        buttonGroup.selectAll(".left")
+        if (buttonGroup.selectAll(".left").classed("active")) {
+          buttonGroup.selectAll(".left")
+            .classed("active", false)
+            .classed("inactive", true)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedFill)
+            .style("stroke", clickedStroke)
+            .style("stroke-width", clickedWidth)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.left")
+            .style("stroke-width", 0)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", clickedStroke)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", inactiveStroke)
+          visibleCases = visibleCases.map(function (item) {
+            // Increment each item by 1
+            return item - (totalCase + 1);
+          });
+          labelCases(visibleCases, bookInfo.caseLimits)
+          shelveBooks(bookInfo)
+        } else {
+          buttonGroup.selectAll(".left")
+            .classed("active", false)
+            .classed("inactive", true)
+            .style("fill", inactiveFill)
+            .style("stroke", inactiveStroke)
+            .style("stroke-width", inactiveWidth)
+          buttonGroup.selectAll("text.btext.left")
+            .style("stroke-width", 0)
+            .style("fill", inactiveStroke)
+        }
+      }
+      if (bookInd < numberbooks) {
+        buttonGroup.selectAll(".right")
+          .classed("inactive", false)
+          .classed("active", true)
+          .style("fill", activeFill)
+          .style("stroke", activeStroke)
+          .style("stroke-width", activeWidth)
+        buttonGroup.selectAll("text.btext.right")
+          .style("stroke-width", 0)
+          .style("fill", activeStroke)
+      } else {
+        buttonGroup.selectAll(".right")
           .classed("active", false)
           .classed("inactive", true)
           .style("fill", inactiveFill)
           .style("stroke", inactiveStroke)
           .style("stroke-width", inactiveWidth)
-        buttonGroup.selectAll("text.btext.left")
+        buttonGroup.selectAll("text.btext.right")
           .style("stroke-width", 0)
           .style("fill", inactiveStroke)
       }
     }
-    if (bookInd < numberbooks) {
-      buttonGroup.selectAll(".right")
-        .classed("inactive", false)
-        .classed("active", true)
-        .style("fill", activeFill)
-        .style("stroke", activeStroke)
-        .style("stroke-width", activeWidth)
-      buttonGroup.selectAll("text.btext.right")
-        .style("stroke-width", 0)
-        .style("fill", activeStroke)
-    } else {
-      buttonGroup.selectAll(".right")
-        .classed("active", false)
-        .classed("inactive", true)
-        .style("fill", inactiveFill)
-        .style("stroke", inactiveStroke)
-        .style("stroke-width", inactiveWidth)
-      buttonGroup.selectAll("text.btext.right")
-        .style("stroke-width", 0)
-        .style("fill", inactiveStroke)
-    }
+
+    buttonGroup.selectAll(".right")
+      .on("click", moveRight)
+
+    buttonGroup.selectAll(".left")
+      .on("click", moveLeft)
+
+    // by default, arrow keys navigate shelves, can toggle between
+    var browseShelf = -1
+    d3.select("body")
+      .on("keydown", function () {
+        //toggle between shelf and book browsing
+        if (d3.event.keyCode === 13) {
+          browseShelf = -browseShelf
+        }
+        if (d3.event.keyCode === 27) {
+          browseShelf = -1
+        }
+        if ((d3.event.keyCode === 39 || d3.event.keyCode === 40) && (browseShelf === -1)) {
+          moveRight();
+        }
+        if ((d3.event.keyCode === 37 || d3.event.keyCode === 38) && (browseShelf === -1)) {
+          moveLeft();
+        }
+      })
   }
 
-  buttonGroup.selectAll(".right")
-    .on("click", moveRight)
 
-  buttonGroup.selectAll(".left")
-    .on("click", moveLeft)
 
-  // by default, arrow keys navigate shelves, can toggle between
-  var browseShelf = -1
-  d3.select("body")
-    .on("keydown", function () {
-      //toggle between shelf and book browsing
-      if (d3.event.keyCode === 13) {
-        browseShelf = -browseShelf
-      }
-      if (d3.event.keyCode === 27) {
-        browseShelf = -1
-      }
-      if ((d3.event.keyCode === 39 || d3.event.keyCode === 40) && (browseShelf === -1)) {
-        moveRight();
-      }
-      if ((d3.event.keyCode === 37 || d3.event.keyCode === 38) && (browseShelf === -1)) {
-        moveLeft();
-      }
-    })
+
+  // Create first book shelf
+  var currentCase = makeshelf(margin.left + 0);
+
+  // Create arrays to store shelf information
+  var caseBounds = [currentCase[0]];
+  var caseShelves = [currentCase[1]];
+
+  // Start trackers for positional information
+  // For visible cases
+  var caseInd = 0;
+  var totalCase = 0;
+  // For global case position
+  var visibleCases = [0];
+
+  // Track properties of currently shelved books
+  var caseLimits = [{
+    'start': '',
+    'end': ''
+  }]
+
+  // Measures to determine how many shelves will fit
+  var shelfExtent = caseBounds[caseInd].xouter + caseGap
+  var availSpace = twidth - margin.right
+
+  // Create as many more bookshelves as needed
+  // Break out if the next case would put us beyond the bounds of page
+  // This could be done deterministically but I don't think it would be faster?
+  while (true) {
+    shelfExtent = caseBounds[caseInd].xouter + (caseThickness * 2) + swidth + (caseGap * 2)
+    if (shelfExtent <= availSpace) {
+      currentCase = makeshelf(caseBounds[caseInd].xouter + caseGap);
+      caseBounds.push(currentCase[0]);
+      caseShelves.push(currentCase[1]);
+      totalCase += 1;
+      caseInd += 1;
+      visibleCases.push(caseInd)
+      caseLimits.push({
+        'start': '',
+        'end': ''
+      })
+    } else {
+      break
+    }
+  };
+
+  // Need to write a background for this
+  var tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("opacity", "0")
+    .style("position", "absolute")
+
+  // Populate first shelf
+  var casePosition = 0
+  var firstBook = [0]
+  var bookIndStart = firstBook[casePosition]
+  bookInfo = prepBooks(firstBook[casePosition])
+  var selectedBook = -1
+  var lockedBook = fillArray(false, bookInfo.vertices.length)
+  bookInd = shelveBooks(bookInfo)
+  labelCases(visibleCases, bookInfo.caseLimits)
+
+  // Add scroll buttons
+  scrollButtons()
 }
