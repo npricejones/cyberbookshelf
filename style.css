@@ -22,11 +22,24 @@ html, body {
   font-weight: normal;
   font-size: 16px;
 }
+/*                             INFO PANEL                                    */
+.info.background{
+  fill: #E8E8E8;
+  stroke: #505050;
+  stroke-width: 2
+}
+
+.info.label{
+  fill: #505050;
+  font-family: Helvetica;
+  font-weight: normal;
+  font-size: 20px;
+}
 
 /*                             BOOKCASES                                     */
 .case {
   fill: var(--brown);
-  stroke: black;
+  stroke: #201511;
 }
 
 .labels{
