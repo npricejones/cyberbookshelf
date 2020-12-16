@@ -26,10 +26,24 @@ html, body {
 .info.background{
   fill: #E8E8E8;
   stroke: #505050;
-  stroke-width: 2
+  stroke-width: 2;
 }
 
-.info.label{
+.info.slots{
+  fill: #F4F4F4;
+  stroke: #7E7E7E;
+  stroke-width: 1.5;
+}
+
+.info.label.slots{
+  fill: #505050;
+  font-family: Helvetica;
+  font-weight: normal;
+  font-size: 18px;
+  stroke-width: 0;
+}
+
+.info.label.header{
   fill: #505050;
   font-family: Helvetica;
   font-weight: normal;

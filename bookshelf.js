@@ -303,7 +303,7 @@ function shelveLibrary(data, sortkey = null) {
     .attr("width", "100%");
 
   totalCase = drawShelves(margin)
-  hidePanel()
+  showPanel()
 
   function hidePanel() {
     svg.selectAll("*").remove()
@@ -362,7 +362,7 @@ function shelveLibrary(data, sortkey = null) {
         return d.y
       })
       .attr("class", function (d, i) {
-        return "info label"
+        return "info label header"
       })
       .attr("text-anchor", "middle")
       .attr("alignment-baseline", "middle")
@@ -415,7 +415,7 @@ function shelveLibrary(data, sortkey = null) {
         return "info background";
       })
       .on("click", hidePanel)
-    svg.selectAll("text.panel")
+    svg.selectAll("text.info")
       .data(message)
       .enter().append("text")
       .text(function (d, i) {
@@ -428,11 +428,62 @@ function shelveLibrary(data, sortkey = null) {
         return d.y
       })
       .attr("class", function (d, i) {
-        return "info label"
+        return "info label header"
       })
       .attr("text-anchor", "middle")
       .attr("alignment-baseline", "middle")
       .on("click", hidePanel)
+
+    var bookProp = [{
+      'label': 'title: ',
+      'x': margin.left + 15,
+      'y': panelTop + 60,
+      'name': 'title'
+    }]
+    svg.selectAll("text.slots")
+      .data(bookProp)
+      .enter().append("text")
+      .text(function (d, i) {
+        return d.label
+      })
+      .attr("x", function (d, i) {
+        return d.x
+      })
+      .attr("y", function (d, i) {
+        return d.y
+      })
+      .attr("class", function (d, i) {
+        return "info label slots " + d.name
+      })
+      .attr("text-anchor", "left")
+      .attr("alignment-baseline", "middle")
+    bbox = svg.select("text.title").node().getBBox()
+    console.log(bbox, totalCaseWidth)
+    var fillBox = [{
+      'x': bbox.x + bbox.width + 10,
+      'y': bbox.y - 2.5,
+      'height': bbox.height + 5,
+      'width': totalCaseWidth - bbox.width - 50
+    }]
+    console.log(fillBox)
+    svg.selectAll("rect.slots")
+      .data(fillBox)
+      .enter().append("rect")
+      .attr("height", function (d, i) {
+        return d.height;
+      })
+      .attr("width", function (d, i) {
+        return d.width;
+      })
+      .attr("x", function (d, i) {
+        return d.x;
+      })
+      .attr("y", function (d, i) {
+        return d.y;
+      })
+      .attr("class", function (d, i) {
+        return "info background slots";
+      })
     totalCase = drawShelves(margin)
   }
 
