@@ -1,6 +1,8 @@
 var parseDay = d3.timeParse("%Y/%m/%d")
 var parseYear = d3.timeParse("%Y")
 
+console.log(parseYear("1975").getFullYear())
+
 // general line functions
 function line(x, x0, y0, angle) {
   var m = Math.tan(angle)
@@ -21,7 +23,14 @@ function fillArray(value, len) {
   return arr;
 }
 
+var displayNames = {
+  'title': 'title',
+  'displayAuthors': 'author',
+  'seriesAll': 'series',
+  'pubYear': 'release',
+}
 
+var yearList = ['pubYear']
 
 /**
  * loadWrapper interprets a library csv and shelves it
@@ -302,11 +311,23 @@ function shelveLibrary(data, sortkey = null) {
     .attr("height", "100%")
     .attr("width", "100%");
 
+  var infoPanel = svg.append("g")
+  var bookCases = svg.append("g")
+  var buttonGroup = svg.append("g")
+
+  function cleansvg() {
+    infoPanel.selectAll("*").remove()
+    bookCases.selectAll("*").remove()
+    buttonGroup.selectAll("*").remove()
+  }
+
   totalCase = drawShelves(margin)
+  var panelVis = null
   showPanel()
 
   function hidePanel() {
-    svg.selectAll("*").remove()
+    cleansvg()
+    panelVis = false
     totalCaseWidth = ((totalCase + 1) * (swidth + (caseThickness * 2)))
     totalCaseWidth += (totalCase * caseGap)
     margin['top'] = closedBottom
@@ -324,7 +345,7 @@ function shelveLibrary(data, sortkey = null) {
       'width': totalCaseWidth,
       'height': panelHeight
     }]
-    svg.selectAll("rect.info")
+    infoPanel.selectAll("rect.info")
       .data(panelProp)
       .enter().append("rect")
       .attr("height", function (d, i) {
@@ -349,7 +370,7 @@ function shelveLibrary(data, sortkey = null) {
         return "info background";
       })
       .on("click", showPanel)
-    svg.selectAll("text.panel")
+    infoPanel.selectAll("text.panel")
       .data(message)
       .enter().append("text")
       .text(function (d, i) {
@@ -371,7 +392,8 @@ function shelveLibrary(data, sortkey = null) {
   }
 
   function showPanel() {
-    svg.selectAll("*").remove()
+    cleansvg()
+    panelVis = true
     totalCaseWidth = ((totalCase + 1) * (swidth + (caseThickness * 2)))
     totalCaseWidth += (totalCase * caseGap)
     margin['top'] = 300
@@ -390,7 +412,7 @@ function shelveLibrary(data, sortkey = null) {
       'width': totalCaseWidth,
       'height': panelHeight
     }]
-    svg.selectAll("rect.info")
+    infoPanel.selectAll("rect.info")
       .data(panelProp)
       .enter().append("rect")
       .attr("height", function (d, i) {
@@ -415,7 +437,7 @@ function shelveLibrary(data, sortkey = null) {
         return "info background";
       })
       .on("click", hidePanel)
-    svg.selectAll("text.info")
+    infoPanel.selectAll("text.info")
       .data(message)
       .enter().append("text")
       .text(function (d, i) {
@@ -434,13 +456,23 @@ function shelveLibrary(data, sortkey = null) {
       .attr("alignment-baseline", "middle")
       .on("click", hidePanel)
 
-    var bookProp = [{
-      'label': 'title: ',
-      'x': margin.left + 15,
-      'y': panelTop + 60,
-      'name': 'title'
-    }]
-    svg.selectAll("text.slots")
+    names = ['title', 'displayAuthors', 'seriesAll', 'pubYear']
+    var longest = names.reduce(
+      function (a, b) {
+        return displayNames[a].length > displayNames[b].length ? a : b;
+      }
+    );
+    var bookProp = []
+    for (n = 0; n < names.length; n++) {
+      prop = {
+        'label': displayNames[names[n]] + ': ',
+        'x': margin.left + 15,
+        'y': panelTop + 60 + 30 * n,
+        'name': names[n]
+      }
+      bookProp.push(prop)
+    }
+    infoPanel.selectAll("text.slots")
       .data(bookProp)
       .enter().append("text")
       .text(function (d, i) {
@@ -457,16 +489,19 @@ function shelveLibrary(data, sortkey = null) {
       })
       .attr("text-anchor", "left")
       .attr("alignment-baseline", "middle")
-    bbox = svg.select("text.title").node().getBBox()
-    console.log(bbox, totalCaseWidth)
-    var fillBox = [{
-      'x': bbox.x + bbox.width + 10,
-      'y': bbox.y - 2.5,
-      'height': bbox.height + 5,
-      'width': totalCaseWidth - bbox.width - 50
-    }]
-    console.log(fillBox)
-    svg.selectAll("rect.slots")
+    var fillBox = []
+    edgebbox = bbox = infoPanel.select("text." + longest).node().getBBox()
+    for (n = 0; n < names.length; n++) {
+      bbox = infoPanel.select("text." + names[n]).node().getBBox()
+      fill = {
+        'x': edgebbox.x + edgebbox.width + 10,
+        'y': bbox.y - 2.5,
+        'height': bbox.height + 5,
+        'width': totalCaseWidth - edgebbox.width - 50
+      }
+      fillBox.push(fill)
+    }
+    infoPanel.selectAll("rect.slots")
       .data(fillBox)
       .enter().append("rect")
       .attr("height", function (d, i) {
@@ -486,13 +521,6 @@ function shelveLibrary(data, sortkey = null) {
       })
     totalCase = drawShelves(margin)
   }
-
-
-  //addInfoPanel()
-
-
-
-  // function that produced shelves for a certain margin parameter
 
   function drawShelves(margin) {
     var numshelf = Math.floor((theight - margin.top - margin.bottom) / sheight)
@@ -579,7 +607,7 @@ function shelveLibrary(data, sortkey = null) {
 
       shelfProperties = shelfProperties.concat(caseProperties);
 
-      svg.selectAll("rect.x" + xstart)
+      bookCases.selectAll("rect.x" + xstart)
         .data(shelfProperties)
         .enter().append("rect")
         .attr("height", function (d, i) {
@@ -623,9 +651,9 @@ function shelveLibrary(data, sortkey = null) {
         }
         labelInfo.push(info)
       }
-      svg.selectAll("rect.labels").remove()
-      svg.selectAll("text.labeltext").remove()
-      svg.selectAll("rect.labels")
+      bookCases.selectAll("rect.labels").remove()
+      bookCases.selectAll("text.labeltext").remove()
+      bookCases.selectAll("rect.labels")
         .data(labelInfo)
         .enter().append("rect")
         .attr("x", function (d, i) {
@@ -641,7 +669,7 @@ function shelveLibrary(data, sortkey = null) {
           return d.h
         })
         .attr("class", "bookcase labels")
-      svg.selectAll("text.labeltext")
+      bookCases.selectAll("text.labeltext")
         .data(labelInfo)
         .enter().append("text")
         .text(function (d, i) {
@@ -735,6 +763,48 @@ function shelveLibrary(data, sortkey = null) {
       };
     }
 
+    function updatePanel(d, i) {
+      if (panelVis) {
+        infoPanel.selectAll("text.fill").remove()
+        positions = infoPanel.selectAll("rect.slots").data()
+        keyinfo = infoPanel.selectAll("text.slots").data()
+        console.log(keyinfo)
+        fillText = []
+        for (var n = 0; n < positions.length; n++) {
+          if ((yearList.indexOf(keyinfo[n].name) >= 0) && data[i][keyinfo[n].name]) {
+            label = data[i][keyinfo[n].name].getFullYear()
+          } else {
+            label = data[i][keyinfo[n].name]
+          }
+          fill = {
+            'x': positions[n].x + 5,
+            'y': keyinfo[n].y,
+            'label': label,
+            'name': keyinfo[n].name,
+          }
+          fillText.push(fill)
+        }
+        console.log(fillText)
+        infoPanel.selectAll("text.fill")
+          .data(fillText)
+          .enter().append("text")
+          .text(function (d, i) {
+            return d.label
+          })
+          .attr("x", function (d, i) {
+            return d.x
+          })
+          .attr("y", function (d, i) {
+            return d.y
+          })
+          .attr("class", function (d, i) {
+            return "info fill f" + d.name
+          })
+          .attr("text-anchor", "left")
+          .attr("alignment-baseline", "middle")
+      }
+    }
+
     /**
      * chooseBook highlights the appearance of the selected book
      * @param {Object} d - data point
@@ -755,11 +825,7 @@ function shelveLibrary(data, sortkey = null) {
           .style("fill", bookFill["looking"])
           .style("stroke", bookStroke["looking"])
           .style("stroke-width", bookWidth["looking"])
-        // Move the tooltip
-        tooltip.style("opacity", "1")
-          .style("left", d[2][0] + "px")
-          .style("top", d[2][1] + "px")
-        tooltip.html(data[i + bookIndStart].title + "<br>by: " + data[i + bookIndStart].displayAuthors)
+        updatePanel(d, i)
       }
     }
 
@@ -799,6 +865,7 @@ function shelveLibrary(data, sortkey = null) {
       }
       // if we didn't lock to the current book, highlight the new book
       chooseBook(d, i)
+      showPanel(totalCase)
     }
     /**
      * shelveBooks draws rectangles for each book
@@ -808,9 +875,9 @@ function shelveLibrary(data, sortkey = null) {
     this.shelveBooks = function (bookInfo) {
       bookIndStart = bookInfo.bookIndStart
       vertices = bookInfo.vertices
-      svg.selectAll(".book").remove()
+      bookCases.selectAll(".book").remove()
 
-      svg.selectAll("path.book")
+      bookCases.selectAll("path.book")
         .data(vertices)
         .enter().append("path")
         .attr("d", function (d) {
@@ -854,9 +921,6 @@ function shelveLibrary(data, sortkey = null) {
         'r': buttonr,
         'size': buttonfs
       }];
-
-
-      var buttonGroup = svg.append("g")
 
       // button background
       buttonGroup.selectAll("circle.button")
