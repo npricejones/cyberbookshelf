@@ -1,8 +1,6 @@
 var parseDay = d3.timeParse("%Y/%m/%d")
 var parseYear = d3.timeParse("%Y")
 
-console.log(parseYear("1975").getFullYear())
-
 // general line functions
 function line(x, x0, y0, angle) {
   var m = Math.tan(angle)
@@ -23,10 +21,47 @@ function fillArray(value, len) {
   return arr;
 }
 
+/** from https://stackoverflow.com/questions/29031659/calculate-width-of-text-before-drawing-the-text
+ */
+var BrowserText = (function () {
+  var canvas = document.createElement('canvas'),
+    context = canvas.getContext('2d');
+
+  /**
+   * Measures the rendered width of arbitrary text given the font size and font face
+   * @param {string} text The text to measure
+   * @param {number} fontSize The font size in pixels
+   * @param {string} fontFace The font face ("Arial", "Helvetica", etc.)
+   * @returns {number} The width of the text
+   **/
+  function getWidth(text, fontSize, fontFace) {
+    context.font = fontSize + 'px ' + fontFace;
+    return context.measureText(text).width;
+  }
+
+  function loopWidth(text, fontSize, fontFace) {
+    tlen = text.length;
+    lengths = fillArray(0, tlen);
+    for (var i = 0; i < tlen; i++) {
+      lengths[i] = getWidth(text.slice(0, i), fontSize, fontFace);
+    }
+    return lengths;
+  }
+
+  return {
+    getWidth: getWidth,
+    loopWidth: loopWidth
+  };
+})();
+
+
+
+
+
 var displayNames = {
   'title': 'title',
   'displayAuthors': 'author',
-  'seriesAll': 'series',
+  'series': 'series',
   'pubYear': 'release',
 }
 
@@ -85,7 +120,7 @@ function interpretGR(d) {
     series = series.split(')')[0].split('#')
     pointobj['series'] = series[0].split(',')[0].trim()
     if (series[1]) {
-      pointobj['seriesNum'] = Number(series[1].trim())
+      pointobj['seriesNum'] = series[1].trim()
     } else {
       pointobj['seriesNum'] = ''
     }
@@ -116,7 +151,8 @@ function interpretGR(d) {
 function shelveLibrary(data, sortkey = null) {
   // need to write a handler for books with no page count
   //extract styles from css
-
+  var currentlyLocked = -1
+  var currentStartInd = -1
 
   var bookFill = {}
   var bookStroke = {}
@@ -249,7 +285,7 @@ function shelveLibrary(data, sortkey = null) {
    * @return {Array} Sorted version of input data
    */
   this.sortLibrary = function (data, sortkey = 'author',
-    secondaryKeys = ['author', 'series', 'seriesNum', 'pubYear']) {
+    secondaryKeys = ['author', 'seriesAll']) {
     // Precalc the number of seconday keys
     var numKeys = secondaryKeys.length
     // Get new list of secondary keys that excludes the primary key
@@ -314,6 +350,8 @@ function shelveLibrary(data, sortkey = null) {
   var infoPanel = svg.append("g")
   var bookCases = svg.append("g")
   var buttonGroup = svg.append("g")
+
+  var fillBoxWidth = 0
 
   function cleansvg() {
     infoPanel.selectAll("*").remove()
@@ -437,7 +475,7 @@ function shelveLibrary(data, sortkey = null) {
         return "info background";
       })
       .on("click", hidePanel)
-    infoPanel.selectAll("text.info")
+    infoPanel.selectAll("text.header")
       .data(message)
       .enter().append("text")
       .text(function (d, i) {
@@ -456,22 +494,33 @@ function shelveLibrary(data, sortkey = null) {
       .attr("alignment-baseline", "middle")
       .on("click", hidePanel)
 
-    names = ['title', 'displayAuthors', 'seriesAll', 'pubYear']
+    names = ['title', 'displayAuthors', 'series', 'pubYear']
     var longest = names.reduce(
       function (a, b) {
         return displayNames[a].length > displayNames[b].length ? a : b;
       }
     );
+    longestLabel = BrowserText.getWidth(longest, 16, 'Helvetica')
+    fillBoxWidth = swidth - longestLabel - 20
     var bookProp = []
+    var fillBox = []
     for (n = 0; n < names.length; n++) {
       prop = {
-        'label': displayNames[names[n]] + ': ',
-        'x': margin.left + 15,
+        'label': displayNames[names[n]],
+        'x': margin.left + 15 + (longestLabel / 2),
         'y': panelTop + 60 + 30 * n,
         'name': names[n]
       }
+      fill = {
+        'x': margin.left + 15 + longestLabel + 10,
+        'y': panelTop + 60 + 30 * n - 17.5,
+        'height': 18 + 5,
+        'width': fillBoxWidth
+      }
+      fillBox.push(fill)
       bookProp.push(prop)
     }
+
     infoPanel.selectAll("text.slots")
       .data(bookProp)
       .enter().append("text")
@@ -487,20 +536,9 @@ function shelveLibrary(data, sortkey = null) {
       .attr("class", function (d, i) {
         return "info label slots " + d.name
       })
-      .attr("text-anchor", "left")
+      .attr("text-anchor", "middle")
       .attr("alignment-baseline", "middle")
-    var fillBox = []
-    edgebbox = bbox = infoPanel.select("text." + longest).node().getBBox()
-    for (n = 0; n < names.length; n++) {
-      bbox = infoPanel.select("text." + names[n]).node().getBBox()
-      fill = {
-        'x': edgebbox.x + edgebbox.width + 10,
-        'y': bbox.y - 2.5,
-        'height': bbox.height + 5,
-        'width': totalCaseWidth - edgebbox.width - 50
-      }
-      fillBox.push(fill)
-    }
+
     infoPanel.selectAll("rect.slots")
       .data(fillBox)
       .enter().append("rect")
@@ -768,14 +806,38 @@ function shelveLibrary(data, sortkey = null) {
         infoPanel.selectAll("text.fill").remove()
         positions = infoPanel.selectAll("rect.slots").data()
         keyinfo = infoPanel.selectAll("text.slots").data()
-        console.log(keyinfo)
         fillText = []
+        labelSpace = fillBoxWidth - 5
         for (var n = 0; n < positions.length; n++) {
           if ((yearList.indexOf(keyinfo[n].name) >= 0) && data[i][keyinfo[n].name]) {
-            label = data[i][keyinfo[n].name].getFullYear()
+            label = data[bookIndStart + i][keyinfo[n].name].getFullYear()
           } else {
-            label = data[i][keyinfo[n].name]
+            label = data[bookIndStart + i][keyinfo[n].name]
           }
+          //length check
+          // need box size
+          try {
+            labelLength = label.length
+          } catch (err) {
+            if (err.message.includes("Uncaught TypeError: can't access property \"length\"")) {
+              labelLength = 0
+            }
+          }
+
+          console.log(label)
+          labelLengths = BrowserText.loopWidth(String(label), 16, 'Helvetica')
+          trimInd = labelLength - 1
+          labelInd = labelLengths.slice(trimInd)[0]
+          while (labelInd >= labelSpace) {
+            trimInd = trimInd - 1
+            labelInd = labelLengths.slice(trimInd)[0]
+            console.log(labelInd, trimInd, labelSpace)
+            label = label.slice(0, trimInd - 3)
+            label = label + "..."
+
+          }
+
+
           fill = {
             'x': positions[n].x + 5,
             'y': keyinfo[n].y,
@@ -784,7 +846,6 @@ function shelveLibrary(data, sortkey = null) {
           }
           fillText.push(fill)
         }
-        console.log(fillText)
         infoPanel.selectAll("text.fill")
           .data(fillText)
           .enter().append("text")
@@ -853,6 +914,7 @@ function shelveLibrary(data, sortkey = null) {
       // If no books are highlighted, highlight the current one
       if (d3.sum(lockedBook) == false) {
         lockedBook[i] = !lockedBook[i]
+        currentlyLocked = i
       } else {
         // If a book was locked, find its index
         lastBook = lockedBook.findIndex(function (val) {
@@ -860,12 +922,15 @@ function shelveLibrary(data, sortkey = null) {
         })
         // unlock previously highlighted book
         lockedBook[lastBook] = false
+        currentlyLocked = -1
         // recolour the previously highlighted book
         cleanLastBook(d, i)
       }
       // if we didn't lock to the current book, highlight the new book
       chooseBook(d, i)
-      showPanel(totalCase)
+      if (!panelVis) {
+        showPanel(totalCase)
+      }
     }
     /**
      * shelveBooks draws rectangles for each book
@@ -897,389 +962,6 @@ function shelveLibrary(data, sortkey = null) {
      */
     var buttonDuration = 130;
     var buttonDelay = 0;
-
-    this.scrollButtons = function (buttonDuration = 130, buttonDelay = 0) {
-      var leftButtonx = margin.left / 2;
-      var rightButtonx = caseBounds[caseBounds.length - 1].xouter + leftButtonx;
-      var leftButtony = ((caseBounds[0].ylower - caseBounds[0].yupper) / 2) + caseBounds[0].yupper;
-      var rightButtony = leftButtony;
-      var buttonr = margin.left * 0.25
-      var buttonfs = buttonr * 0.75
-
-      var buttons = [{
-        'cx': leftButtonx,
-        'cy': leftButtony,
-        'direction': 'left',
-        'label': 'previous',
-        'r': buttonr,
-        'size': buttonfs
-      }, {
-        'cx': rightButtonx,
-        'cy': rightButtony,
-        'direction': 'right',
-        'label': 'next',
-        'r': buttonr,
-        'size': buttonfs
-      }];
-
-      // button background
-      buttonGroup.selectAll("circle.button")
-        .data(buttons)
-        .enter().append("circle")
-        .attr("cx", function (d, i) {
-          return d.cx;
-        })
-        .attr("cy", function (d, i) {
-          return d.cy;
-        })
-        .attr("r", 25)
-        .attr("class", function (d, i) {
-          return "bookcase button " + d.direction;
-        })
-
-      // half opening angle of the arrow
-      var angle = 32 * Math.PI / 180 //radians
-
-      // arrow properties
-      var awidth = 20
-      var athick = 7
-      var abuffer = 3
-
-      // center the arrows
-      xstartL = buttons[0].cx - 1.2 * (awidth / 2)
-      ystartL = buttons[0].cy
-
-      xstartR = buttons[1].cx + 1.2 * (awidth / 2)
-      ystartR = buttons[1].cy
-
-      // create arrow vertices
-      var arrows = [
-        [
-          [xstartL, ystartL],
-          [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, angle)],
-          [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL - athick, angle)],
-          [invertline(ystartL, xstartL, ystartL - athick, angle), ystartL],
-          [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL + athick, -angle)],
-          [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, -angle)],
-          [xstartL, ystartL]
-        ], //left arrow
-        [
-          [xstartR, ystartR],
-          [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, -angle)],
-          [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR - athick, -angle)],
-          [invertline(ystartR, xstartR, ystartR - athick, -angle), ystartR],
-          [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR + athick, angle)],
-          [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, angle)],
-          [xstartR, ystartR]
-        ] // right arrow
-      ]
-
-      // draw the arrows
-      buttonGroup.selectAll("path.button")
-        .data(arrows)
-        .enter().append("path")
-        .attr("d", function (d) {
-          return "M" + d.join("L") + "Z"
-        })
-        .attr("class", function (d, i) {
-          return "bookcase button " + buttons[i].direction;
-        })
-
-
-      // update button properties
-      if (bookInd < numberbooks) {
-        buttonGroup.selectAll(".right")
-          .classed("active", true)
-      } else {
-        buttonGroup.selectAll(".right")
-          .classed("inactive", true)
-      }
-
-      buttonGroup.selectAll(".left")
-        .classed("inactive", true)
-
-      buttonGroup.selectAll("text.btext")
-        .data(buttons)
-        .enter().append("text")
-        .text(function (d, i) {
-          return d.label
-        })
-        .attr("x", function (d, i) {
-          return d.cx
-        })
-        .attr("y", function (d, i) {
-          return d.cy + (1.75 * d.r)
-        })
-        .attr("class", function (d, i) {
-          return "bookcase button btext " + d.direction
-        })
-        .attr("text-anchor", "middle")
-        .attr("alignment-baseline", "middle")
-        .style("font-size", function (d, i) {
-          return d.size + "px";
-        })
-        .style("stroke-width", 0)
-
-      buttonGroup.selectAll("text.btext.left")
-        .style("fill", buttonStroke['inactive'])
-
-      if (bookInd < numberbooks) {
-        buttonGroup.selectAll("text.btext.right")
-          .style("fill", buttonStroke['active'])
-      } else {
-        buttonGroup.selectAll("text.btext.right")
-          .style("fill", buttonStroke['inactive'])
-      }
-
-
-      function moveRight() {
-        if (bookInd < numberbooks) {
-          casePosition = casePosition + 1
-          firstBook.push(bookInd)
-        }
-        bookIndStart = firstBook[casePosition]
-        bookInfo = prepBooks(bookIndStart)
-        selectedBook = -1
-        lockedBook = fillArray(false, bookInfo.vertices.length)
-        bookInd = bookInfo.bookIndEnd
-        // Change left button appearance
-        if (bookIndStart > 0) {
-          buttonGroup.selectAll(".left")
-            .classed("inactive", false)
-            .classed("active", true)
-            .style("fill", buttonFill['active'])
-            .style("stroke", buttonStroke['active'])
-            .style("stroke-width", buttonWidth['active'])
-          buttonGroup.selectAll("text.btext.left")
-            .style("stroke-width", 0)
-            .style("fill", buttonStroke['active'])
-        } else {
-          buttonGroup.selectAll(".left")
-            .classed("active", false)
-            .classed("inactive", true)
-            .style("fill", buttonFill['inactive'])
-            .style("stroke", buttonStroke['inactive'])
-            .style("stroke-width", buttonWidth['inactive'])
-          buttonGroup.selectAll("text.btext.left")
-            .style("stroke-width", 0)
-            .style("fill", buttonStroke['inactive'])
-        }
-        // Change right button appearance
-        if (bookInd < numberbooks) {
-          buttonGroup.selectAll(".right")
-            .classed("inactive", false)
-            .classed("active", true)
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonFill['clicked'])
-            .style("stroke", buttonStroke['clicked'])
-            .style("stroke-width", buttonWidth['clicked'])
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonFill['active'])
-            .style("stroke", buttonStroke['active'])
-            .style("stroke-width", buttonWidth['active'])
-          buttonGroup.selectAll("text.btext.right")
-            .style("stroke-width", 0)
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonStroke['clicked'])
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonStroke['active'])
-          visibleCases = visibleCases.map(function (item) {
-            // Increment each item by 1
-            return item + (totalCase + 1);
-          });
-          labelCases(visibleCases, bookInfo.caseLimits)
-          shelveBooks(bookInfo)
-
-        } else {
-          if (buttonGroup.selectAll(".right").classed("active")) {
-            buttonGroup.selectAll(".right")
-              .classed("active", false)
-              .classed("inactive", true)
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonFill['clicked'])
-              .style("stroke", buttonStroke['clicked'])
-              .style("stroke-width", buttonWidth['clicked'])
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonFill['inactive'])
-              .style("stroke", buttonStroke['inactive'])
-              .style("stroke-width", buttonWidth['inactive'])
-            buttonGroup.selectAll("text.btext.right")
-              .style("stroke-width", 0)
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonStroke['clicked'])
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonStroke['inactive'])
-            visibleCases = visibleCases.map(function (item) {
-              // Increment each item by 1
-              return item + (totalCase + 1);
-            });
-            labelCases(visibleCases, bookInfo.caseLimits)
-            shelveBooks(bookInfo)
-          } else {
-            buttonGroup.selectAll(".right")
-              .classed("active", false)
-              .classed("inactive", true)
-              .style("fill", buttonFill['inactive'])
-              .style("stroke", buttonStroke['inactive'])
-              .style("stroke-width", buttonWidth['inactive'])
-            buttonGroup.selectAll("text.btext.right")
-              .style("fill", buttonStroke['inactive'])
-              .style("stroke-width", 0)
-          }
-        }
-      }
-
-      function moveLeft() {
-        casePosition = d3.max([0, casePosition - 1])
-        bookIndStart = firstBook[casePosition]
-        bookInfo = prepBooks(bookIndStart)
-        selectedBook = -1
-        lockedBook = fillArray(false, bookInfo.vertices.length)
-        bookInd = bookInfo.bookIndEnd
-        if (bookIndStart > 0) {
-          buttonGroup.selectAll(".left")
-            .classed("inactive", false)
-            .classed("active", true)
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonFill['clicked'])
-            .style("stroke", buttonStroke['clicked'])
-            .style("stroke-width", buttonWidth['clicked'])
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonFill['active'])
-            .style("stroke", buttonStroke['active'])
-            .style("stroke-width", buttonWidth['active'])
-          buttonGroup.selectAll("text.btext.left")
-            .style("stroke-width", 0)
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonStroke['clicked'])
-            .transition()
-            .duration(buttonDuration)
-            .delay(buttonDelay)
-            .style("fill", buttonStroke['active'])
-          visibleCases = visibleCases.map(function (item) {
-            // Increment each item by 1
-            return item - (totalCase + 1);
-          });
-          labelCases(visibleCases, bookInfo.caseLimits)
-          shelveBooks(bookInfo)
-        } else {
-          if (buttonGroup.selectAll(".left").classed("active")) {
-            buttonGroup.selectAll(".left")
-              .classed("active", false)
-              .classed("inactive", true)
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonFill['clicked'])
-              .style("stroke", buttonStroke['clicked'])
-              .style("stroke-width", buttonWidth['clicked'])
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonFill['inactive'])
-              .style("stroke", buttonStroke['inactive'])
-              .style("stroke-width", buttonWidth['inactive'])
-            buttonGroup.selectAll("text.btext.left")
-              .style("stroke-width", 0)
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonStroke['clicked'])
-              .transition()
-              .duration(buttonDuration)
-              .delay(buttonDelay)
-              .style("fill", buttonStroke['inactive'])
-            visibleCases = visibleCases.map(function (item) {
-              // Increment each item by 1
-              return item - (totalCase + 1);
-            });
-            labelCases(visibleCases, bookInfo.caseLimits)
-            shelveBooks(bookInfo)
-          } else {
-            buttonGroup.selectAll(".left")
-              .classed("active", false)
-              .classed("inactive", true)
-              .style("fill", buttonFill['inactive'])
-              .style("stroke", buttonStroke['inactive'])
-              .style("stroke-width", buttonWidth['inactive'])
-            buttonGroup.selectAll("text.btext.left")
-              .style("stroke-width", 0)
-              .style("fill", buttonStroke['inactive'])
-          }
-        }
-        if (bookInd < numberbooks) {
-          buttonGroup.selectAll(".right")
-            .classed("inactive", false)
-            .classed("active", true)
-            .style("fill", buttonFill['active'])
-            .style("stroke", buttonStroke['active'])
-            .style("stroke-width", buttonWidth['active'])
-          buttonGroup.selectAll("text.btext.right")
-            .style("stroke-width", 0)
-            .style("fill", buttonStroke['active'])
-        } else {
-          buttonGroup.selectAll(".right")
-            .classed("active", false)
-            .classed("inactive", true)
-            .style("fill", buttonFill['inactive'])
-            .style("stroke", buttonStroke['inactive'])
-            .style("stroke-width", buttonWidth['inactive'])
-          buttonGroup.selectAll("text.btext.right")
-            .style("stroke-width", 0)
-            .style("fill", buttonStroke['inactive'])
-        }
-      }
-
-      buttonGroup.selectAll(".right")
-        .on("click", moveRight)
-
-      buttonGroup.selectAll(".left")
-        .on("click", moveLeft)
-
-      // by default, arrow keys navigate shelves, can toggle between
-      var browseShelf = -1
-      d3.select("body")
-        .on("keydown", function () {
-          //toggle between shelf and book browsing
-          if (d3.event.keyCode === 13) {
-            browseShelf = -browseShelf
-          }
-          if (d3.event.keyCode === 27) {
-            browseShelf = -1
-          }
-          if ((d3.event.keyCode === 39 || d3.event.keyCode === 40) && (browseShelf === -1)) {
-            moveRight();
-          }
-          if ((d3.event.keyCode === 37 || d3.event.keyCode === 38) && (browseShelf === -1)) {
-            moveLeft();
-          }
-        })
-    }
-
-
-
 
     // Create first book shelf
     var currentCase = makeshelf(margin.left + 0);
@@ -1338,13 +1020,399 @@ function shelveLibrary(data, sortkey = null) {
     var firstBook = [0]
     var bookIndStart = firstBook[casePosition]
     bookInfo = prepBooks(firstBook[casePosition])
-    var selectedBook = -1
-    var lockedBook = fillArray(false, bookInfo.vertices.length)
     bookInd = shelveBooks(bookInfo)
     labelCases(visibleCases, bookInfo.caseLimits)
 
     // Add scroll buttons
-    scrollButtons()
+
+    var leftButtonx = margin.left / 2;
+    var rightButtonx = caseBounds[caseBounds.length - 1].xouter + leftButtonx;
+    var leftButtony = ((caseBounds[0].ylower - caseBounds[0].yupper) / 2) + caseBounds[0].yupper;
+    var rightButtony = leftButtony;
+    var buttonr = margin.left * 0.25
+    var buttonfs = buttonr * 0.75
+
+    var buttons = [{
+      'cx': leftButtonx,
+      'cy': leftButtony,
+      'direction': 'left',
+      'label': 'previous',
+      'r': buttonr,
+      'size': buttonfs
+    }, {
+      'cx': rightButtonx,
+      'cy': rightButtony,
+      'direction': 'right',
+      'label': 'next',
+      'r': buttonr,
+      'size': buttonfs
+    }];
+
+    // button background
+    buttonGroup.selectAll("circle.button")
+      .data(buttons)
+      .enter().append("circle")
+      .attr("cx", function (d, i) {
+        return d.cx;
+      })
+      .attr("cy", function (d, i) {
+        return d.cy;
+      })
+      .attr("r", 25)
+      .attr("class", function (d, i) {
+        return "bookcase button " + d.direction;
+      })
+
+    // half opening angle of the arrow
+    var angle = 32 * Math.PI / 180 //radians
+
+    // arrow properties
+    var awidth = 20
+    var athick = 7
+    var abuffer = 3
+
+    // center the arrows
+    xstartL = buttons[0].cx - 1.2 * (awidth / 2)
+    ystartL = buttons[0].cy
+
+    xstartR = buttons[1].cx + 1.2 * (awidth / 2)
+    ystartR = buttons[1].cy
+
+    // create arrow vertices
+    var arrows = [
+      [
+        [xstartL, ystartL],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, angle)],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL - athick, angle)],
+        [invertline(ystartL, xstartL, ystartL - athick, angle), ystartL],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL + athick, -angle)],
+        [xstartL + awidth, line(xstartL + awidth, xstartL, ystartL, -angle)],
+        [xstartL, ystartL]
+      ], //left arrow
+      [
+        [xstartR, ystartR],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, -angle)],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR - athick, -angle)],
+        [invertline(ystartR, xstartR, ystartR - athick, -angle), ystartR],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR + athick, angle)],
+        [xstartR - awidth, line(xstartR - awidth, xstartR, ystartR, angle)],
+        [xstartR, ystartR]
+      ] // right arrow
+    ]
+
+    // draw the arrows
+    buttonGroup.selectAll("path.button")
+      .data(arrows)
+      .enter().append("path")
+      .attr("d", function (d) {
+        return "M" + d.join("L") + "Z"
+      })
+      .attr("class", function (d, i) {
+        return "bookcase button " + buttons[i].direction;
+      })
+
+
+    // update button properties
+    if (bookInd < numberbooks) {
+      buttonGroup.selectAll(".right")
+        .classed("active", true)
+    } else {
+      buttonGroup.selectAll(".right")
+        .classed("inactive", true)
+    }
+
+    buttonGroup.selectAll(".left")
+      .classed("inactive", true)
+
+    buttonGroup.selectAll("text.btext")
+      .data(buttons)
+      .enter().append("text")
+      .text(function (d, i) {
+        return d.label
+      })
+      .attr("x", function (d, i) {
+        return d.cx
+      })
+      .attr("y", function (d, i) {
+        return d.cy + (1.75 * d.r)
+      })
+      .attr("class", function (d, i) {
+        return "bookcase button btext " + d.direction
+      })
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .style("font-size", function (d, i) {
+        return d.size + "px";
+      })
+      .style("stroke-width", 0)
+
+    buttonGroup.selectAll("text.btext.left")
+      .style("fill", buttonStroke['inactive'])
+
+    if (bookInd < numberbooks) {
+      buttonGroup.selectAll("text.btext.right")
+        .style("fill", buttonStroke['active'])
+    } else {
+      buttonGroup.selectAll("text.btext.right")
+        .style("fill", buttonStroke['inactive'])
+    }
+
+
+    function moveRight() {
+      if (bookInd < numberbooks) {
+        casePosition = casePosition + 1
+        firstBook.push(bookInd)
+      }
+      bookIndStart = firstBook[casePosition]
+      bookInfo = prepBooks(bookIndStart)
+      selectedBook = -1
+      lockedBook = fillArray(false, bookInfo.vertices.length)
+      bookInd = bookInfo.bookIndEnd
+      // Change left button appearance
+      if (bookIndStart > 0) {
+        buttonGroup.selectAll(".left")
+          .classed("inactive", false)
+          .classed("active", true)
+          .style("fill", buttonFill['active'])
+          .style("stroke", buttonStroke['active'])
+          .style("stroke-width", buttonWidth['active'])
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .style("fill", buttonStroke['active'])
+      } else {
+        buttonGroup.selectAll(".left")
+          .classed("active", false)
+          .classed("inactive", true)
+          .style("fill", buttonFill['inactive'])
+          .style("stroke", buttonStroke['inactive'])
+          .style("stroke-width", buttonWidth['inactive'])
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .style("fill", buttonStroke['inactive'])
+      }
+      // Change right button appearance
+      if (bookInd < numberbooks) {
+        buttonGroup.selectAll(".right")
+          .classed("inactive", false)
+          .classed("active", true)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonFill['clicked'])
+          .style("stroke", buttonStroke['clicked'])
+          .style("stroke-width", buttonWidth['clicked'])
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonFill['active'])
+          .style("stroke", buttonStroke['active'])
+          .style("stroke-width", buttonWidth['active'])
+        buttonGroup.selectAll("text.btext.right")
+          .style("stroke-width", 0)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonStroke['clicked'])
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonStroke['active'])
+        visibleCases = visibleCases.map(function (item) {
+          // Increment each item by 1
+          return item + (totalCase + 1);
+        });
+        labelCases(visibleCases, bookInfo.caseLimits)
+        shelveBooks(bookInfo)
+
+      } else {
+        if (buttonGroup.selectAll(".right").classed("active")) {
+          buttonGroup.selectAll(".right")
+            .classed("active", false)
+            .classed("inactive", true)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonFill['clicked'])
+            .style("stroke", buttonStroke['clicked'])
+            .style("stroke-width", buttonWidth['clicked'])
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonFill['inactive'])
+            .style("stroke", buttonStroke['inactive'])
+            .style("stroke-width", buttonWidth['inactive'])
+          buttonGroup.selectAll("text.btext.right")
+            .style("stroke-width", 0)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonStroke['clicked'])
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonStroke['inactive'])
+          visibleCases = visibleCases.map(function (item) {
+            // Increment each item by 1
+            return item + (totalCase + 1);
+          });
+          labelCases(visibleCases, bookInfo.caseLimits)
+          shelveBooks(bookInfo)
+        } else {
+          buttonGroup.selectAll(".right")
+            .classed("active", false)
+            .classed("inactive", true)
+            .style("fill", buttonFill['inactive'])
+            .style("stroke", buttonStroke['inactive'])
+            .style("stroke-width", buttonWidth['inactive'])
+          buttonGroup.selectAll("text.btext.right")
+            .style("fill", buttonStroke['inactive'])
+            .style("stroke-width", 0)
+        }
+      }
+    }
+
+    function moveLeft() {
+      casePosition = d3.max([0, casePosition - 1])
+      bookIndStart = firstBook[casePosition]
+      bookInfo = prepBooks(bookIndStart)
+      selectedBook = -1
+      lockedBook = fillArray(false, bookInfo.vertices.length)
+      bookInd = bookInfo.bookIndEnd
+      if (bookIndStart > 0) {
+        buttonGroup.selectAll(".left")
+          .classed("inactive", false)
+          .classed("active", true)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonFill['clicked'])
+          .style("stroke", buttonStroke['clicked'])
+          .style("stroke-width", buttonWidth['clicked'])
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonFill['active'])
+          .style("stroke", buttonStroke['active'])
+          .style("stroke-width", buttonWidth['active'])
+        buttonGroup.selectAll("text.btext.left")
+          .style("stroke-width", 0)
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonStroke['clicked'])
+          .transition()
+          .duration(buttonDuration)
+          .delay(buttonDelay)
+          .style("fill", buttonStroke['active'])
+        visibleCases = visibleCases.map(function (item) {
+          // Increment each item by 1
+          return item - (totalCase + 1);
+        });
+        labelCases(visibleCases, bookInfo.caseLimits)
+        shelveBooks(bookInfo)
+      } else {
+        if (buttonGroup.selectAll(".left").classed("active")) {
+          buttonGroup.selectAll(".left")
+            .classed("active", false)
+            .classed("inactive", true)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonFill['clicked'])
+            .style("stroke", buttonStroke['clicked'])
+            .style("stroke-width", buttonWidth['clicked'])
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonFill['inactive'])
+            .style("stroke", buttonStroke['inactive'])
+            .style("stroke-width", buttonWidth['inactive'])
+          buttonGroup.selectAll("text.btext.left")
+            .style("stroke-width", 0)
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonStroke['clicked'])
+            .transition()
+            .duration(buttonDuration)
+            .delay(buttonDelay)
+            .style("fill", buttonStroke['inactive'])
+          visibleCases = visibleCases.map(function (item) {
+            // Increment each item by 1
+            return item - (totalCase + 1);
+          });
+          labelCases(visibleCases, bookInfo.caseLimits)
+          shelveBooks(bookInfo)
+        } else {
+          buttonGroup.selectAll(".left")
+            .classed("active", false)
+            .classed("inactive", true)
+            .style("fill", buttonFill['inactive'])
+            .style("stroke", buttonStroke['inactive'])
+            .style("stroke-width", buttonWidth['inactive'])
+          buttonGroup.selectAll("text.btext.left")
+            .style("stroke-width", 0)
+            .style("fill", buttonStroke['inactive'])
+        }
+      }
+      if (bookInd < numberbooks) {
+        buttonGroup.selectAll(".right")
+          .classed("inactive", false)
+          .classed("active", true)
+          .style("fill", buttonFill['active'])
+          .style("stroke", buttonStroke['active'])
+          .style("stroke-width", buttonWidth['active'])
+        buttonGroup.selectAll("text.btext.right")
+          .style("stroke-width", 0)
+          .style("fill", buttonStroke['active'])
+      } else {
+        buttonGroup.selectAll(".right")
+          .classed("active", false)
+          .classed("inactive", true)
+          .style("fill", buttonFill['inactive'])
+          .style("stroke", buttonStroke['inactive'])
+          .style("stroke-width", buttonWidth['inactive'])
+        buttonGroup.selectAll("text.btext.right")
+          .style("stroke-width", 0)
+          .style("fill", buttonStroke['inactive'])
+      }
+    }
+
+    buttonGroup.selectAll(".right")
+      .on("click", moveRight)
+
+    buttonGroup.selectAll(".left")
+      .on("click", moveLeft)
+
+    // by default, arrow keys navigate shelves, can toggle between
+    var browseShelf = -1
+    d3.select("body")
+      .on("keydown", function () {
+        //toggle between shelf and book browsing
+        if (d3.event.keyCode === 13) {
+          browseShelf = -browseShelf
+        }
+        if (d3.event.keyCode === 27) {
+          browseShelf = -1
+        }
+        if ((d3.event.keyCode === 39 || d3.event.keyCode === 40) && (browseShelf === -1)) {
+          moveRight();
+        }
+        if ((d3.event.keyCode === 37 || d3.event.keyCode === 38) && (browseShelf === -1)) {
+          moveLeft();
+        }
+      })
+
+    var selectedBook = -1
+    var lockedBook = fillArray(false, bookInfo.vertices.length)
+    if (currentlyLocked >= 0) {
+      if (currentlyLocked >= bookInd) {
+        currentlyLocked -= bookInd
+        moveRight()
+      }
+      chooseBook(null, currentlyLocked)
+      lockedBook[currentlyLocked] = true
+    }
     return totalCase
   }
 
